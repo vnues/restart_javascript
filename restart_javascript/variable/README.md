@@ -1,4 +1,4 @@
-# var和let的区别
+# 浅谈var、let、闭包以及立即执行函数(namespace)
 
 ## 首先我们来看个常见的例子
 ```javascript
