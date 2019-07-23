@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-cmn-Hans">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="IE=edge, chrome=1">
+    <title>debounce</title>
+    <style>
+        #container{
+            width: 100%; height: 200px; line-height: 200px; text-align: center; color: #fff; background-color: #444; font-size: 30px;
+        }
+    </style>
+</head>
+
+<body>
+<div id="container"></div>
+<button id="button">取消按钮</button>
+<script src="debounce.js"></script>
+<script>
+
+    var count = 1;
+    var container = document.getElementById('container');
+
+    function getUserAction(e) {
+        console.log("我被触发了")
+        container.innerHTML = count++;
+         // return "123123" 没什么意义给事件函数加return好像没什么意义
+    };
+
+    var setUseAction = debounce(getUserAction, 1000, true);
+
+    container.onmousemove = setUseAction;
+
+    document.getElementById("button").addEventListener('click', function(){
+        setUseAction.cancel();
+    })
+
+</script>
+</body>
+<!--result的存在实际没啥意义-->
+</html>
