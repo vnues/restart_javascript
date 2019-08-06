@@ -19,10 +19,58 @@
        // [1,2,3]
       // console.log(array)   // 数组是引用类型
       // console.log(arrayMap) // [3,6,9]
-      debugger
-      let array=[1,2,3]
-      const arrayMap= _.map(array,[12,3])
-      console.log(arrayMap) //  [undefined, undefined, undefined]
+      // debugger
+      // let array=[1,2,3]
+      // const arrayMap= _.map(array,[12,3])
+      // console.log(arrayMap) //  [undefined, undefined, undefined]
+      // debugger
+      // const obj={name:"vnues",age:22,height:170}
+      // const objMap= _.map(obj,{name:"李白"})
+      // console.log(objMap) // [undefined, undefined, undefined]？
+      // 排除错误 正确结果为  [false, false, false]
+      var restArguments = function(func, startIndex) {
+    // 不会傻乎乎给用户规定的 默认就是rest是最后一个参数   而且rest是以数组存放剩余参数的
+    // 我们默认使用传入的函数的最后一个参数储存剩余的参数
+    //  startIndex 表示使用哪个位置的参数用于储存剩余的参数
+    //  我们更多的是为了操作这个rest变量吧
+    // length 属性指明函数的形参个数。(注意是形参)
+    startIndex = startIndex == null ? func.length - 1 : +startIndex;
+    return function() {
+      // arguments.length - startIndex这么写 考虑负值的情况
+      var length = Math.max(arguments.length - startIndex, 0),
+        rest = Array(length),
+        index = 0;
+      for (; index < length; index++) {
+        rest[index] = arguments[index + startIndex];
+      }
+      switch (startIndex) {
+        case 0:
+          return func.call(this, rest);
+        case 1:
+          return func.call(this, arguments[0], rest);
+        case 2:
+          return func.call(this, arguments[0], arguments[1], rest);
+      }
+
+      var args = Array(startIndex + 1);
+      for (index = 0; index < startIndex; index++) {
+        args[index] = arguments[index];
+      }
+      // rest是以数组看待
+      args[startIndex] = rest;
+      // console.log("args", args);
+      // console.log("rest", rest);
+      return func.apply(this, args);
+    };
+  };
+
+  function test(a,b,c,d,e,f,g,rest){
+       console.log("a,b,c,d,f,g",a,b,c,d,f,g)
+       console.log("rest",rest)
+  }
+
+  test=restArguments(test)
+  test(1,2,3,4,55,6,77,88,9,9,9,100,23478234,23402943)
    </script>
 </body>
 </html>

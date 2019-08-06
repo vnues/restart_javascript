@@ -2,6 +2,8 @@
    underscore即是需求
 */
 
+// 函数式编程 既要考虑调用这个函数需要哪些参数 也要知道回调函数它给我们返回哪些参数！！！
+
 // 立即执行函数实现模块化，避免变量跑到全局去
 // 理解执行函数会执行这个函数里面的代码
 (function() {
@@ -60,7 +62,10 @@
         var args = [this._wrapped];
         // args.push(arguments)
         push.apply(args, arguments);
-        func(this, args);
+        // 调用这个chainResult返回一个_实例化对象
+        // 这个操作也只是针对于_是否是实例化对象
+        return chainResult(this, func(this, args));
+        // func(this, args);
         // func.apply(_, args);
       };
     });
@@ -193,7 +198,8 @@
   _.isObject = function(obj) {
     var type = typeof obj;
     // function obj null 的typeof 结果都为Object
-    return type === "function" || (type === "object" && !obj);
+    // 如果是!!null==>false 如果非null !!obj则为true
+    return type === "function" || (type === "object" && !!obj);
   };
 
   // 判断是否是数组
@@ -210,6 +216,7 @@
   // cb函数return出去的是一个函数 感觉用ts写法会更加清晰
   // 并且cb函数会提供用户自定封装iteratee的接口
   // _.iteratee一个是可以提供用户包装iteratee，cb是underore已经提供的包装iteratee
+  // value是iteratee函数（也可能是别的数据类型）
   var cb = function(value, context, argCount) {
     // 因为 _.iteratee = builtinIteratee 的缘故，_.iteratee !== builtinIteratee 值为 false，所以正常情况下 _.iteratee(value, context)` 并不会执行。
     // 但是如果我们在外部修改了 _.iteratee 函数，结果便会为 true，cb 函数直接返回 _.iteratee(value, context)。
@@ -220,6 +227,7 @@
     // 传入的iteratee为null 返回原value
     if (value === null) return _.identity;
     if (_.isFunction(value)) return optimizeCb(value, context, argCount);
+    // 如果iteratee传入的是对象 那么就判断被迭代者属性（对象也可能不是对象）的key和value的key是否匹配
     if (_.isObject(value) && !_.isArray(value)) return _.matcher(value); // 处理Object类型
     return _.property(value); // 处理非Object类型
   };
@@ -242,13 +250,142 @@
           return func.call(context, value, index, collection);
         };
       case 4:
+        //reducer(obj, optimizeCb(iteratee, context, 4), memo, initial)
+        // accumulator是累加器 为什么是累加器？
+        // 回调函数接收中 以reduce方法为例子 accumulator是
         return function(accumulator, value, index, collection) {
           return func.call(context, accumulator, value, index, collection);
         };
     }
+    // 返回的是回调函数
     return function() {
       return func.apply(context, arguments);
     };
+  };
+  // defaults就是config配置项 要不要开启
+  // 该方法可以拷贝多个对象
+  var crateAssigner = function(keysFunc, defaults) {
+    return function(obj) {
+      var length = arguments.length;
+      if (defaults) {
+        obj = Object(obj);
+      }
+      if (length < 2 || obj === null) return obj;
+      // 第一个是扩展对象  后面的对象是要被拷贝的
+      // 从这里就知道是浅拷贝了 浅层次的拷贝一层
+      // 实际即使不通过这个方法 简单的for...in...也行的
+      // 核心就是for循环赋值 赋值操作就是拷贝值拷贝 !!!很重要 理解这点
+      for (var index = 1; index < length; index++) {
+        // 拷贝的对象资源
+        var source = arguments[index],
+          // 拿到键值
+          keys = keysFunc(source),
+          l = keys.length;
+        for (var i = 0; i < l; i++) {
+          var key = keys[i];
+          if (!defaults || obj[key] === void 0) obj[key] = source[key];
+        }
+      }
+      return obj;
+    };
+  };
+
+  // 只复制 obj 自身的属性 assign -->分配
+  _.extendOwn = _.assign = crateAssigner(_.keys);
+
+  _.matcher = _.matches = function(attrs) {
+    attrs = _.extendOwn({}, attrs);
+    // 为什么返回函数因为所有的iteratte都要被处理成函数
+    return function(obj) {
+      return _.isMatch(obj, attrs);
+    };
+  };
+
+  _.isMatch = function(object, attrs) {
+    var keys = _.keys(attrs),
+      length = keys.length;
+    if (object == null) return !length;
+    // 确保为object对象
+    var obj = Object(object);
+    for (var i = 0; i < length; i++) {
+      var key = keys[i];
+      // 如果指定的属性在指定的对象或其原型链中，则in 运算符返回true。
+      if (attrs[key] !== obj[key] || !(key in obj)) {
+        return false;
+      }
+    }
+    return true;
+  };
+  /* 有这么一个需求 就是出现了过多的实参参数 没有形参变量表示 又不想用arguments[xxx]去获取   <=== rest就是处理这种场景的 */
+  // 封装函数 包裹函数  加工函数 内部肯定得返回一个函数
+  // rest参数实现
+  // 我们现在需要实现一个需求:函数声明时候使用一个rest变量代表剩余参数
+  // 类似es6 rest参数
+  // ES6 引入 rest 参数（形式为...变量名），用于获取函数的多余参数，这样就不需要使用arguments对象了。
+  // rest 参数搭配的变量是一个数组，该变量将多余的参数放入数组中
+  // 我们默认使用传入的函数的最后一个参数储存剩余的参数
+  // 确实抓住的是用变量表示剩余参数
+  // 这里的实现是最后一个形参为剩余参数--->理解这个很重要
+  // 从startIndex开始（包含startIndex这个位置的参数）算就是剩余参数
+  // 这样算下来形参的长度应该是startIndex+1 ！！！
+  // 一种特殊情况 实参少于形参（就会出现负值
+  // 也就是经过restArguments函数的包装 我们最后一个形参可以表示剩余参数了
+  var restArguments = function(func, startIndex) {
+    // 默认startIndex为null也即是最后一个形参变量表示剩余参数
+    // 这里不能===
+    startIndex = startIndex == null ? func.length - 1 : startIndex;
+    return function() {
+      // 假设用户输入100000
+      // 一种特殊情况 实参少于形参（就会出现负值）
+      var length = Math.max(arguments.length - startIndex, 0),
+        rest = Array(length),
+        index = 0; // （var声明）这样的写法更加具体明确不会有坑（for循环中）
+      // 生成rest变量
+      for (; index < length; i++) {
+        rest[index] = arguments[startIndex + index];
+      }
+      // 形参实参一一对应  其实总觉得一一对应才是有逻辑的 js太自由了
+      // 优化性能
+      switch (startIndex) {
+        case 0:
+          // 调用一一对应
+          return func.call(this, rest);
+        case 1:
+          return func.call(this, arguments[0], rest);
+        case 2:
+          return func.call(this, arguments[0], arguments[1], rest);
+      }
+      // 调用func传入参数
+      // restArguments就是把形参变量没有表示的实参参数扔带最后一个形参变量
+      var args = Array(startIndex + 1);
+      for (index = 0; index < startIndex; index++) {
+        args[index] = arguments[index];
+      }
+      args[startIndex] = rest;
+      // call性能比apply高一点 apply比call方便的是参数一团扔进去就行
+      return func.apply(this, args);
+    };
+  };
+  /*本来场景就是处理出现过余参数 */
+  /* 再强调一遍restArguments函数的实现意义就是让最形参变量表示剩余（过余）参数 */
+  /* 只考虑默认情况 最后一个形参变量表示剩余参数 */
+
+  // 我们现在有这样一个新的需求：希望能这样调用[1,1,2,3,4].each(xxx).map(xxx)或者这样调用_([1,2,3]).each().map()
+  // 也就是默认不开启链式调用 只有使用_.chain方法才会开启链式调用
+  // 也就是通过_chain方法才能开启链式调用
+  // 刚开始想默认开启链式调用 但是发现每个方法（如果通过函数式编程的话好像都要改写）但是我们的minixn已经把方法挂载到原型就行
+  // 所以想要链式操作 还是得实例化一个_实例化对象 所以需要_.chain方法
+  // 重点在于理解_这个函数（对象)返回实例化对象
+  // 链式调用的核心就是调用这次函数执行在返回一个具有对应方法的对象
+  _.chain = function(obj) {
+    if (obj instanceof _) return obj;
+    var instance = _(obj);
+    instance._chain = true; // 控制开关
+    return instance;
+  };
+  // intance是上个调用的方法的实例化对象_ 所以可以拿到_chain属性 这个obj是运行完方法返回的对象
+  var chainResult = function(instance, obj) {
+    return instance._chain ? _(obj).chain() : obj;
   };
 
   /* ------------------------需求:collection方法就是作用于集合对象的-------------------------- */
@@ -271,6 +408,7 @@
 
   // Return the results of applying the iteratee to each element.
   // each、map等方法（内部迭代器模式）统一叫迭代函数，map中iteratee迭代者函数必须是return一个值,然后最后结果最后返回一个处理完后的数组
+  // map内置对象匹配的功能 比如匹配循环的对象属性是否具有对应的key值
   _.map = _.collect = function(obj, iteratee, context) {
     iteratee = cb(iteratee, context);
     // 如果为数组keys为undefined 都不会走赋值这步
@@ -283,6 +421,100 @@
       results[index] = iteratee(obj[currentKey], currentKey, obj);
     }
     return results;
+  };
+
+  // reduce函数有两种形式 一种是从右到左执行 一种是从左往右 所以需要一个dir确定 同时返回一个函数 那么来写一个公共函数来实现它吧
+  var createReduce = function(dir) {
+    var reducer = function(obj, iteratee, memo, initial) {
+      var keys = !isArrayLike(obj) && _.keys(obj),
+        length = (keys || obj).length,
+        index = dir > 0 ? 0 : length - 1; // index最大 就是Obj从右开始
+      // initial跟memo绑定的 如果没有传memo则initial为false
+      // If no memo is passed to the initial invocation of , the iteratee is not invoked on the first element of the list.
+      // 意思是如果没有传递memo iteratee不会在第一个元素调用
+      // 如果没有传memo就要初始化一遍memo 是这个意思
+      // 我们总是用!inistial代表true来表示条件
+      // 所以在表达式判断时候得具有这个思想
+      if (!initial) {
+        memo = obj[keys ? keys[index] : index];
+        index += dir;
+      }
+      for (; index >= 0 && index < length; index += dir) {
+        var currentKey = keys ? keys[index] : index;
+        // 重点这一步
+        // memo是运算后得到的值
+        // 传了四个参数过去
+        memo = iteratee(memo, obj[currentKey], currentKey, obj);
+      }
+      return memo;
+    };
+    // 接收的参数
+    return function(obj, iteratee, memo, context) {
+      // 就是这步把 initial和memo绑定
+      var initial = arguments.length >= 3;
+      return reducer(obj, optimizeCb(iteratee, context, 4), memo, initial);
+    };
+  };
+
+  // index+1
+  _.reduce = _.foldl = createReduce(1);
+  // index-1
+  _.reduceRight = _.foldr = createReduce(-1);
+
+  // 如果是组合函数的话 reduce接收两个参数 一个是迭代参数a 一个是累积参数b ==>可以这样子操作 a(b) 这样就实现组合了
+  // reduce实现组合函数的核心就是实现好iteratee函数
+  // 那么这个执行顺序是从右到左还是从左到右  应该是从左往右
+
+  // ！！！predicate函数 可以理解返回值为布尔值 predicate函数就是检测判断函数
+  _.find = function(obj, predicate, context) {
+    var keyFinder = isArrayLike(obj) ? _.findIndex : _.findKey;
+    var key = keyFinder(obj, predicate, context);
+    if (key !== void 0 && key !== -1) return obj[key];
+  };
+
+  // 声明一个生成函数 to create the findIndex and findLastIndex functions
+  // 只返回一个
+  var createPredicateIndexFinder = function(dir) {
+    return function(array, predicate, context) {
+      predicate = cb(predicate, context);
+      var length = getLength(array);
+      var index = dir > 0 ? 0 : length - 1;
+      for (; index >= 0 && index < length; index += dir) {
+        // predicate返回的是布尔值
+        if (predicate(array[index], index, array)) return index;
+      }
+      return -1;
+    };
+  };
+
+  _.findIndex = createPredicateIndexFinder(1);
+  _.findLastIndex = createPredicateIndexFinder(-1);
+
+  // 找到对象的key值
+  _.findKey = function(obj, predicate, context) {
+    predicate = cb(predicate, context);
+    var keys = _.keys(obj);
+    for (var i = 0, length = keys.length; i < length; i++) {
+      if (predicate(obj[key], key, obj)) return key;
+    }
+    //
+    return void 0;
+  };
+  // 返回全部 使用each循环 秒啊！！!
+  _.filter = _.select = function(obj, predicate, context) {
+    var results = [];
+    predicate = cb(predicate, context);
+    _.each(obj, function(value, index, list) {
+      if (predicate(valiue, index, list)) results.push(value);
+    });
+    return results;
+  };
+
+  // 判断属性是否有在obj数组内的对象的属性
+  _.where = function(obj, attrs) {
+    // return结果
+    // _.matcher(attrs)返回的是函数 也就是作为iteratee
+    return _.filter(obj, _.matcher(attrs));
   };
 
   // 进行复制

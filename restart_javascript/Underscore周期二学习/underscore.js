@@ -152,11 +152,21 @@
    想想这样写的好处就是...args  我们可以拿到args这个变量  而这个变量存着剩余的参数  数组存储
 
   */
-
+  // 确实抓住的是用变量表示剩余参数
+  // 这里的实现是最后一个形参为剩余参数
+  // 从startIndex开始（包含）算就是剩余参数
+  // 这样算下来形参的长度应该是startIndex+1
   var restArguments = function(func, startIndex) {
     // 不会傻乎乎给用户规定的 默认就是rest是最后一个参数   而且rest是以数组存放剩余参数的
+    // 我们默认使用传入的函数的最后一个参数储存剩余的参数
+    //  startIndex 表示使用哪个位置的参数用于储存剩余的参数
+    //  我们更多的是为了操作这个rest变量吧
+    // length 属性指明函数的形参个数。(注意是形参)
     startIndex = startIndex == null ? func.length - 1 : +startIndex;
     return function() {
+      // arguments.length - startIndex这么写 考虑负值的情况
+      // 假设用户输入100000
+      // 一种特殊情况 实参少于形参（就会出现负值）
       var length = Math.max(arguments.length - startIndex, 0),
         rest = Array(length),
         index = 0;
@@ -293,13 +303,19 @@
       var keys = !isArrayLike(obj) && _.keys(obj),
         length = (keys || obj).length,
         index = dir > 0 ? 0 : length - 1;
+      // If no memo is passed to the initial invocation of reduce, the iteratee is not invoked on the first element of the list.
+      // 意思是如果没有传递memo iteratee不会在第一个元素调用
+      // 第一个元素将当做memo进行传递
       if (!initial) {
+        // 应该是考虑了类数组的情况
         memo = obj[keys ? keys[index] : index];
+        // 记得改变index值
         index += dir;
       }
       for (; index >= 0 && index < length; index += dir) {
         var currentKey = keys ? keys[index] : index;
         // 重点这一步
+        // memo是运算后得到的值
         memo = iteratee(memo, obj[currentKey], currentKey, obj);
       }
       return memo;
@@ -1209,14 +1225,20 @@
     return names.sort();
   };
 
+  // 把一个对象里的属性拷贝到另外一个对象中 --->也就是扩展对象属性
+
   // An internal function for creating assigner functions.
   var createAssigner = function(keysFunc, defaults) {
+    // 接收一个用来拷贝的object对象
     return function(obj) {
       var length = arguments.length;
+      // Object本身是一个函数，可以当作工具方法使用，将任意值转为对象。这个方法常用于保证某个值一定是对象。
+      // 如果参数为空（或者为undefined和null），Object()返回一个空对象。
       if (defaults) obj = Object(obj);
       if (length < 2 || obj == null) return obj;
       for (var index = 1; index < length; index++) {
         var source = arguments[index],
+          // 拿到键值
           keys = keysFunc(source),
           l = keys.length;
         for (var i = 0; i < l; i++) {
@@ -1619,6 +1641,7 @@
   // Returns a predicate for checking whether an object has a given set of
   // `key:value` pairs.
   _.matcher = _.matches = function(attrs) {
+    // 对象浅拷贝
     attrs = _.extendOwn({}, attrs);
     return function(obj) {
       return _.isMatch(obj, attrs);
@@ -1810,6 +1833,7 @@
   };
 
   // Add a "chain" function. Start chaining a wrapped Underscore object.
+  // 只有调用 _.chain 才会启动链式调用 因为instance._chain开关
   _.chain = function(obj) {
     var instance = _(obj);
     instance._chain = true; // 用于判断
@@ -1849,6 +1873,7 @@
         // return func.apply(_, args);  目的就是要实现这一步 将面向对象的风格
         // 最终解析成可执行函数
         // 最后执行形式  _.each([1,2,3],fn) 所以才把fn放在this._wrapped元素后面
+        // func.apply(_, args)执行完是个数据类型
         return chainResult(this, func.apply(_, args));
       };
     });

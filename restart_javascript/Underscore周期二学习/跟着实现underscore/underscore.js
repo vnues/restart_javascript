@@ -1315,6 +1315,7 @@
   };
 
   // Returns whether an object has a given set of `key:value` pairs.
+  // 一个是object 一个是对象
   _.isMatch = function(object, attrs) {
     var keys = _.keys(attrs),
       length = keys.length;
