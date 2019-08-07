@@ -366,6 +366,7 @@
     var keys = !isArrayLike(obj) && _.keys(obj),
       length = (keys || obj).length;
     for (var index = 0; index < length; index++) {
+      // 判断keys有没有存在
       var currentKey = keys ? keys[index] : index;
       if (!predicate(obj[currentKey], currentKey, obj)) return false;
     }

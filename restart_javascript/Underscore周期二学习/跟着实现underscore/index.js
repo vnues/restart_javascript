@@ -500,7 +500,11 @@
     //
     return void 0;
   };
+  /*
+    筛选函数
+  */
   // 返回全部 使用each循环 秒啊！！!
+  // Looks through each value in the list, returning an array of all the values that pass a truth test (predicate). predicate is transformed through iteratee to facilitate shorthand syntaxes.
   _.filter = _.select = function(obj, predicate, context) {
     var results = [];
     predicate = cb(predicate, context);
@@ -510,12 +514,82 @@
     return results;
   };
 
+  // Looks through the list and returns the first value that matches all of the key-value pairs listed in properties.
+  _.findWhere = function(obj, attrs) {
+    return _.find(obj, _.matcher(attrs));
+  };
+
   // 判断属性是否有在obj数组内的对象的属性
+  // Looks through each value in the list, returning an array of all the values that matches the key-value pairs listed in properties.
+  // where函数与filter函数的区别是不用传iteratee函数
   _.where = function(obj, attrs) {
     // return结果
     // _.matcher(attrs)返回的是函数 也就是作为iteratee
     return _.filter(obj, _.matcher(attrs));
   };
+
+  // Returns a negated version of the passed-in predicate.
+  // 返回传入谓词的否定(函数)版本。
+  // predicate是谓语函数
+  _.negate = function(predicate) {
+    return function() {
+      return !predicate.apply(this, arguments);
+    };
+  };
+
+  // filter返回结果的对立结果
+  _.reject = function(obj, predicate, context) {
+    return _.filter(obj, _.negate(cb(predicate)), context);
+  };
+
+  // Returns true if all of the values in the list pass the predicate truth test. Short-circuits and stops traversing the list if a false element is found. predicate is transformed through iteratee to facilitate shorthand syntaxes.
+  // 传给回调函数obj子属性
+  _.every = _.all = function(obj, predicate, context) {
+    predicate = cb(predicate, context);
+    var keys = !isArrayLike(obj) && _.keys(obj),
+      length = (keys || obj).length;
+    for (var index = 0; index < length; index++) {
+      var currentKey = keys ? keys[index] : index;
+      if (!predicate(obj[currentKey], currentKey, obj)) return false;
+    }
+    return true;
+  };
+
+  // Returns true if any of the values in the list pass the predicate truth test. Short-circuits and stops traversing the list if a true element is found. predicate is transformed through iteratee to facilitate shorthand syntaxes.
+  // 满足一个就为true
+  _.some = _.any = function(obj, predicate, context) {
+    predicate = cb(predicate, context);
+    var keys = !isArrayLike(obj) && _.keys(obj),
+      length = (keys || obj).length;
+    for (var index = 0; index < length; index++) {
+      var currentKey = keys ? keys[index] : index;
+      if (predicate(obj[currentKey], currentKey, obj)) return true;
+    }
+    return false;
+  };
+
+  // 与_.keys方法对应的是_.values拿到对象的值
+  _.values = function(obj) {
+    var keys = _keys(obj),
+      length = keys.length,
+      values = Array(length);
+    for (var i = 0; i < length; i++) {
+      values[i] = obj[keys[i]];
+    }
+    return values;
+  };
+
+  // 判断obj对象是否具有一个属性值  实际就是用值去比较！！！
+  // guard--守卫
+  _.contains = _.includes = _.include = function(obj, item, formIndex, guard) {
+    // guard存在说明fromIndex肯定也有 是否是number类型还得继续判断
+    // 非类数组（数组也归为类数组）对象类型
+    if (!isArrayLike(obj)) obj = _.values(obj);
+    if (typeof formIndex != "number" || guard) formIndex = 0;
+    return _.indexOf(obj, item, formIndex) >= 0;
+  };
+
+  // 实现indexof
 
   // 进行复制
   _.mixin(_);
