@@ -378,10 +378,14 @@
   };
 
   // Invoke a method (with arguments) on every item in a collection.
-
+  // restArguments让回调函数的最后一个参数变量具有rest能力 ----- 可以简单的这样理解
   _.invoke = restArguments(function(obj, path, args) {
     // 剩余参数rest是个数组
     // console.log(arguments);
+    // console.log("args==============》", args);
+    // console.log("arguments", arguments);
+    // console.log("obj", obj);
+    // console.log("path", path);
     var contextPath, func;
     if (_.isFunction(path)) {
       func = path;
@@ -389,6 +393,7 @@
       contextPath = path.slice(0, -1);
       path = path[path.length - 1];
     }
+    // 把context传入
     return _.map(obj, function(context) {
       var method = func;
       if (!method) {
@@ -426,10 +431,13 @@
       lastComputed = -Infinity,
       value,
       computed;
+    // review源码的时候给每个判断做注释 就简单清晰多了 ！！！
+    //如果没有传入的iteratee或者传入的是number
     if (
       iteratee == null ||
       (typeof iteratee == "number" && typeof obj[0] != "object" && obj != null)
     ) {
+      // obj是个数组（前面已经判断数组属性值不是对象）
       obj = isArrayLike(obj) ? obj : _.values(obj);
       for (var i = 0, length = obj.length; i < length; i++) {
         value = obj[i];
@@ -438,6 +446,7 @@
         }
       }
     } else {
+      // 如果传的iteratee是个对象 也会走这步
       iteratee = cb(iteratee, context);
       _.each(obj, function(v, index, list) {
         computed = iteratee(v, index, list);
@@ -495,11 +504,32 @@
   // [Fisher-Yates shuffle](http://en.wikipedia.org/wiki/Fisher–Yates_shuffle).
   // If **n** is not specified, returns a single random element.
   // The internal `guard` argument allows it to work with `map`.
+  // 记得一个map集合是无序的也就是随机的
+  /*
+  
+   算法的过程如下：
+    需要随机置乱的n个元素的数组a
+    从0到n开始循环，循环变量为i
+    生成随机数K，K为0到n之间的随机数
+    交换i位和K位的值
+  */
+  // https://juejin.im/post/59deda706fb9a045204b3625#heading-4
+  // Fisher–Yates:原理很简单，就是遍历数组元素，然后将当前元素与以后随机位置的元素进行交换，从代码中也可以看出，这样乱序的就会更加彻底
+  // 这是一种规律现象 按照数学的来理解
+  /*
+  var rand = _.random(index, last);
+      var temp = sample[index];
+      // 底下两步的操作 就是算法的核心
+      sample[index] = sample[rand];
+      sample[rand] = temp;
+  */
   _.sample = function(obj, n, guard) {
+    // n是没有传入的 只返回一个值
     if (n == null || guard) {
       if (!isArrayLike(obj)) obj = _.values(obj);
       return obj[_.random(obj.length - 1)];
     }
+    // 如果是个obj对象 拿到values数组
     var sample = isArrayLike(obj) ? _.clone(obj) : _.values(obj);
     var length = getLength(sample);
     n = Math.max(Math.min(n, length), 0);
@@ -517,20 +547,27 @@
   _.sortBy = function(obj, iteratee, context) {
     var index = 0;
     iteratee = cb(iteratee, context);
+    // criteria条件
     return _.pluck(
       _.map(obj, function(value, key, list) {
+        //  [{}...]
+        // 键值为value
+        // 新创建一个对象 把item扔进去value 再筛选value出来 这个value就是item
+        // map是支持对象循环的
         return {
           value: value,
           index: index++,
           criteria: iteratee(value, key, list)
         };
       }).sort(function(left, right) {
+        // 要根据的属性值比较
         var a = left.criteria;
         var b = right.criteria;
         if (a !== b) {
           if (a > b || a === void 0) return 1;
           if (a < b || b === void 0) return -1;
         }
+        // 如果a===b的情况 根据index
         return left.index - right.index;
       }),
       "value"
@@ -539,7 +576,13 @@
 
   // An internal function used for aggregate "group by" operations.
   var group = function(behavior, partition) {
+    // partition区分
+    // 有partition则为[[],[]] 没有则为{}
+    // 认清楚是函数引用 还是函数执行
     return function(obj, iteratee, context) {
+      // _.groupBy(list, iteratee, [context])
+      // iteratee默认传入的参数是value, index, obj
+      // 并且这个iteratee需要返回值
       var result = partition ? [[], []] : {};
       iteratee = cb(iteratee, context);
       _.each(obj, function(value, index) {

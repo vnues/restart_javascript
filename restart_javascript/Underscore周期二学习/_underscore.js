@@ -395,10 +395,14 @@
   };
 
   // Invoke a method (with arguments) on every item in a collection.
-
+  // _.invoke(list, methodName, *arguments)
   _.invoke = restArguments(function(obj, path, args) {
+    debugger;
+    console.log("111111111111");
+    console.log("args==============》", args);
     // 剩余参数rest是个数组
     // console.log(arguments);
+    // args -->rest参数
     var contextPath, func;
     if (_.isFunction(path)) {
       func = path;
@@ -406,6 +410,9 @@
       contextPath = path.slice(0, -1);
       path = path[path.length - 1];
     }
+    // 传入iteratee的参数有
+    //  The iteratee is passed three arguments: the value, then the index (or key) of the iteration, and finally a reference to the entire list
+    // 必定有list或者obj的子项
     return _.map(obj, function(context) {
       var method = func;
       if (!method) {
@@ -414,8 +421,10 @@
         }
         if (context == null) return void 0;
         // 数组的方法
-        method = context[path];
+        method = context[path]; // [1,2,3]["sort"]()
       }
+      // context是子项 sort每个item
+      // 注意原生sort方法是怎么作用的
       return method == null ? method : method.apply(context, args);
     });
   });
@@ -804,6 +813,8 @@
 
   // Use a comparator function to figure out the smallest index at which
   // an object should be inserted so as to maintain order. Uses binary search.
+  // [10, 20, 30, 40, 50]注意这个high一开始是5
+  //
   _.sortedIndex = function(array, obj, iteratee, context) {
     iteratee = cb(iteratee, context, 1);
     var value = iteratee(obj);
@@ -814,25 +825,59 @@
       if (iteratee(array[mid]) < value) low = mid + 1;
       else high = mid;
     }
+    console.log(low, hign);
     return low;
   };
 
   // Generator function to create the indexOf and lastIndexOf functions.
   var createIndexFinder = function(dir, predicateFind, sortedIndex) {
+    // _.indexOf(array, value, [isSorted])  以后分析函数要添加对应的参数调用！！！
     return function(array, item, idx) {
+      // 为了知道idx先搞清楚fromIndex idx --> index的简写
       var i = 0,
         length = getLength(array);
+      // idx如果存在并且是number类型
       if (typeof idx == "number") {
         if (dir > 0) {
+          // i从哪里开始循环起
+          // indexOf fromIndex
           i = idx >= 0 ? idx : Math.max(idx + length, i);
-        } else {
+        }
+        // 这里处理lastIndex场景
+        else {
+          // 从此位置开始逆向查找
+          // 最后确实一段length 然后这个就是要循环的长度  为啥赋值length
+          // 对啊 比如你从数组第二个开始 那么数组就是按原length-2来算
+          // 这个跟i表示异曲同工
+          // 为什么➕1
+          // 这个fromIndex只是让我们从哪个位置开始寻找
+          // 不管indexOf还是lastIndex查找位置（fromIndex为正或者为负）都是从左到右➡️ ！！！
+          // lastIndex的fromIndex是从此位置的逆向方向查找 -->这样一想确实长度为idx+1
+          // 如果fromIndex为负idx + length + 1
+          // 比如[a,b,c,d]而且你有没有发现 逆向位置找到的length都是a<-c 这样就是初始位置开始了 所以只关注长度就行
+          // 下标都是从原数组0开始的
           length = idx >= 0 ? Math.min(idx + 1, length) : idx + length + 1;
         }
+        // 如果存在sortedIndex
+        // 什么情况下会走else if  idx不是number的情况  这里好像不需要用到idx 还个体它重新赋值了
+        // Returns the index at which value can be found in the array, or -1 if value is not present in the array.
+        // If you're working with a large array, and you know that the array is already sorted,
+        // pass true for isSorted to use a faster binary search ... or, pass a number as the third argument in order to look for the first matching value in the array after the given index.
+        // 所以idx传的是true如果知道这个数组已经是有顺序的数组
       } else if (sortedIndex && idx && length) {
         idx = sortedIndex(array, item);
         return array[idx] === item ? idx : -1;
       }
+      // 判断NaN情况
       if (item !== item) {
+        // function(array, predicate, context)
+        // _.findIndex([1,2,3],fn) 传入的参数
+        // 所以我们在看函数时候首先得弄清楚 传的是什么参数 通过参数来记住这个函数！！！
+        // 重点在于理解这个slice.call(array, i, length)
+        // 从idx开始找 所以就从这个数组去切然后找 它从这个数组找
+        // 下标是这个数组 不是原来这个数组 所以要在原来的基础上加i  这就是为什么idx + i
+        // fromIndex的意义就是slice数组 从这个新的数组开始找 但别忘记了加回fromIndex（前提如果你slice数组）（这也是为啥底下for循环不加的原因 因为根本没切）
+        // 所以我们slice数组 得记住这个原则 ！！！脑子得有这种规律和意识
         idx = predicateFind(slice.call(array, i, length), _.isNaN);
         return idx >= 0 ? idx + i : -1;
       }

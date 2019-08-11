@@ -1,5 +1,5 @@
 /*
-   underscore即是需求
+   underscore文档即是需求 发现underscore考虑范围是整个对象
 */
 
 // 函数式编程 既要考虑调用这个函数需要哪些参数 也要知道回调函数它给我们返回哪些参数！！！
@@ -106,9 +106,6 @@
     toString = ObjProto.toString,
     hasOwnProperty = ObjProto.hasOwnProperty;
 
-  // 空的construtor对象
-  var Ctor = function() {};
-
   // 内置函数
   var nativeIsArray = Array.isArray,
     nativeKeys = Object.keys,
@@ -120,11 +117,6 @@
     return cb(value, context, Infinity);
   };
 
-  // 处理剩余参数函数
-  var restArguments = function() {};
-
-  // 创建基本对象
-  var baseCreate = function() {};
   // 返回对象的属性值
   var shallowProperty = function(key) {
     return function(obj) {
@@ -176,6 +168,18 @@
     }
     return keys;
   };
+
+  _.allKeys = function(obj) {
+    if (nativeKeys) {
+      return nativeKeys(obj);
+    }
+    var keys = [];
+    for (var key in obj) {
+      keys.push(key);
+    }
+    return keys;
+  };
+
   _.identity = function(value) {
     return value;
   };
@@ -217,6 +221,17 @@
   // 并且cb函数会提供用户自定封装iteratee的接口
   // _.iteratee一个是可以提供用户包装iteratee，cb是underore已经提供的包装iteratee
   // value是iteratee函数（也可能是别的数据类型）
+
+  /* 
+   cb函数有三种情况
+   一：null：就返回该null
+   二：Object：返回一个isMatch函数 _.isMatch(obj, attrs) attrs是否是obj的属性 
+   三：function
+   四：非Object类型
+
+   实际上cb处理函数就行 其它的处理感觉没什么意义
+  */
+  // value ---> iteratee
   var cb = function(value, context, argCount) {
     // 因为 _.iteratee = builtinIteratee 的缘故，_.iteratee !== builtinIteratee 值为 false，所以正常情况下 _.iteratee(value, context)` 并不会执行。
     // 但是如果我们在外部修改了 _.iteratee 函数，结果便会为 true，cb 函数直接返回 _.iteratee(value, context)。
@@ -292,6 +307,9 @@
 
   // 只复制 obj 自身的属性 assign -->分配
   _.extendOwn = _.assign = crateAssigner(_.keys);
+
+  // 包括原型链上的
+  _.extend = createAssigner(_.allKeys);
 
   _.matcher = _.matches = function(attrs) {
     attrs = _.extendOwn({}, attrs);
@@ -389,6 +407,10 @@
   };
 
   /* ------------------------需求:collection方法就是作用于集合对象的-------------------------- */
+  /*         接下来讲的都是聚合对象 作用对象是聚合对象                                           */
+  // 我们这里规定：iteratee默认传入的参数是value, index, obj  ❗️ ❗️ ❗️
+  // 这样才能在后期review代码不会被传入的参数影响
+  // ❗️ ❗️ ❗️还有就是underscore对象属性的写法是a["b"]这种写法 ❗️ ❗️ ❗️s以后对象的属性就是这种写法 以后开发我觉得应该也这样才好❗️ ❗️ ❗️
 
   _.each = _.forEach = function(obj, iteratee, context) {
     iteratee = cb(iteratee, context);
@@ -588,9 +610,350 @@
     if (typeof formIndex != "number" || guard) formIndex = 0;
     return _.indexOf(obj, item, formIndex) >= 0;
   };
-
+  // every some返回布尔值 reject filter返回valuo
   // 实现indexof
+
+  // 在一个排好序的数组中找到 value 对应的位置，保证插入数组后，依然保持有序的状态。
+  // 也就是现在有这么一个需求 就是有一个排好序的数组 我们有个值要插入 如何找到要插入的值
+  // integer整数
+  // 二分法的本质 就是起点和终点 中点都会慢慢靠一起
+  // 还有你找到的那个是通过比较大于或者小于 比如我们现在确定 a<value<c（最后包围成这样）
+  // 那我们可以确定这个value就是b了 比如[10,20,30,40,50] 找到38的位置是3 这个位置3是40（支持这种） 这就是跟findIndex最大的区别
+  // 还有前提是有序数组
+  // 这也是找到index的方法
+  _.sortedIndex = function(array, obj, iteratee, context) {
+    iteratee = cb(iteratee, context, 1);
+    var value = iteratee(obj);
+    var low = 0,
+      high = getLength(array);
+    while (low < high) {
+      var mid = Math.floor((low + high) / 2);
+      if (iterateea(array[mid] < value)) low = mid + 1;
+      else high = mid;
+    }
+    return low;
+  };
+
+  // indexOf方法也是查找index 跟findIndex和sortedIndex一样
+  // 只不过indexOf方法融入了这两种查找方法
+  // idx-->也是fromIndex 也是返回结果的index 这两个的表示
+  // 看到这个参数命名别懵逼！！！
+  var createIndexFinder = function(dir, predicateFind, sortedIndex) {
+    // _.indexOf(array, value, [isSorted])  以后分析函数要添加对应的参数调用！！！
+    return function(array, item, idx) {
+      var i = 0,
+        length = getLength(array);
+      // idx如果存在并且是number类型
+      if (typeof idx == "number") {
+        if (dir > 0) {
+          // i从哪里开始循环起
+          // indexOf fromIndex
+          i = idx >= 0 ? idx : Math.max(idx + length, i);
+        } else {
+          // 从此位置开始逆向查找
+          // 最后确实一段length 然后这个就是要循环的长度  为啥赋值length
+          // 对啊 比如你从数组第二个开始 那么数组就是按原length-2来算
+          // 这个跟i表示异曲同工
+          // 为什么➕1
+          // 这个fromIndex只是让我们从哪个位置开始寻找
+          // 不管indexOf还是lastIndex查找位置（fromIndex为正或者为负）都是从左到右➡️ ！！！
+          // lastIndex的fromIndex是从此位置的逆向方向查找 -->这样一想确实长度为idx+1
+          // 如果fromIndex为负idx + length + 1
+          // 比如[a,b,c,d]而且你有没有发现 逆向位置找到的length都是a<-c 这样就是初始位置开始了 所以只关注长度就行
+          // 下标都是从原数组0开始的
+          length = idx >= 0 ? Math.min(idx + 1, length) : idx + length + 1;
+        }
+      }
+      // 如果存在sortedIndex
+      // 什么情况下会走else if  idx不是number的情况  这里好像不需要用到idx 还个体它重新赋值了
+      // Returns the index at which value can be found in the array, or -1 if value is not present in the array.
+      // If you're working with a large array, and you know that the array is already sorted,
+      // pass true for isSorted to use a faster binary search ... or, pass a number as the third argument in order to look for the first matching value in the array after the given index.
+      // 所以idx传的是true如果知道这个数组已经是有顺序的数组
+      else if (sortedIndex && idx && length) {
+        return array[idx] === item ? idx : -1;
+      }
+      // 判断NaN情况
+      if (item !== item) {
+        // function(array, predicate, context)
+        // _.findIndex([1,2,3],fn) 传入的参数
+        // 所以我们在看函数时候首先得弄清楚 传的是什么参数 通过参数来记住这个函数！！！
+        // 重点在于理解这个slice.call(array, i, length)
+        // 从idx开始找 所以就从这个数组去切然后找 它从这个数组找
+        // 下标是这个数组 不是原来这个数组 所以要在原来的基础上加i  这就是为什么idx + i
+        // fromIndex的意义就是slice数组 从这个新的数组开始找 但别忘记了加回fromIndex（前提如果你slice数组）（这也是为啥底下for循环不加的原因 因为根本没切）
+        // 所以我们slice数组 得记住这个原则 ！！！脑子得有这种规律和意识
+        idx = predicateFind(slice.call(array, i, length), _.isNaN);
+        return idx >= 0 ? idx + i : -1;
+      }
+
+      for (
+        idx = dir > 0 ? i : length - 1;
+        idx >= 0 && idx < length;
+        idx += dir
+      ) {
+        if (array[idx] === item) return idx;
+      }
+      return -1;
+    };
+  };
+  _.isNaN = function(obj) {
+    return _.isNumber(obj) && this.isNaN(obj);
+  };
+
+  // Add some isType methods: isArguments, isFunction, isString, isNumber, isDate, isRegExp, isError, isMap, isWeakMap, isSet, isWeakSet.
+  // each遍历 给_对象绑定方法
+  _.each(
+    [
+      "Arguments",
+      "Function",
+      "String",
+      "Number",
+      "Date",
+      "RegExp",
+      "Error",
+      "Symbol",
+      "Map",
+      "WeakMap",
+      "Set",
+      "WeakSet"
+    ],
+    function(name) {
+      // a.b <===> a["b"] //注意不是a[b] 这样表示的话b是变量
+      _["is" + name] = function(obj) {
+        return toString.call(obj) === "[object" + name + "]";
+      };
+    }
+  );
+  // 现在有这么一个需求
+  // 在list的每个元素上执行methodName方法。 任何传递给invoke的额外参数，invoke都会在调用methodName方法的时候传递给它。
+  /*
+  _.invoke([[5,1,7],[3,4,1]],function(item){
+      console.log(item)
+      console.log(arguments)
+  },[1,2])
+  */
+  // invoke调用
+  // 这个函数方法出现的意义就是使用原生数组方法处理二维数组
+  // 其中自己自定义的回调函数并没有什么效果
+  // 因为自定义函数接收的参数还是我们自己外部给的
+  _.invoke = restArguments(function(obj, path, args) {
+    // 剩余参数rest是个数组
+    // console.log(arguments);
+    // console.log("args==============》", args);
+    // console.log("arguments", arguments);
+    // console.log("obj", obj);
+    // console.log("path", path);
+    var contextPath, func;
+    // path传入的是自定义函数
+    if (_.isFunction(path)) {
+      func = path;
+    }
+    // path传入的是个数组
+    else if (_.isArray(path)) {
+      contextPath = path.slice(0, -1);
+      path = path[path.length - 1];
+    }
+    // 把context传入
+    return _.map(obj, function(context) {
+      var method = func;
+      if (!method) {
+        if (contextPath && contextPath.length) {
+          context = deepGet(context, contextPath);
+        }
+        if (context == null) return void 0;
+        // 数组的方法
+        method = context[path];
+      }
+      return method == null ? method : method.apply(context, args);
+    });
+  });
+
+  // 需求 需要提取一个聚合对象的属性值
+  // pluck 提取
+  //  _.property(key) --> return function
+  // _.map(list, iteratee, [context])
+  _.pluck = function(obj, key) {
+    return _.map(obj, _.property(key));
+  };
+
+  // underscore考虑的范围是整个对象类型 （对象、数组）
+  // 返回list中的最大值。如果传递iteratee参数，iteratee将作为list中每个值的排序依据。如果list为空，将返回-Infinity，所以你可能需要事先用isEmpty检查 list 。
+  _.max = function(obj, iteratee, context) {
+    var result = -Infinity,
+      lastComputed = -Infinity,
+      value,
+      computed;
+    // review源码的时候给每个判断做注释 就简单清晰多了 ！！！
+    //如果没有传入的iteratee或者传入的是number
+    if (
+      iteratee == null ||
+      (typeof iteratee == "number" && typeof obj[0] != "object" && obj != null)
+    ) {
+      // obj是个数组（前面已经判断数组属性值不是对象）
+      obj = isArrayLike(obj) ? obj : _.values(obj);
+      for (var i = 0, length = obj.length; i < length; i++) {
+        value = obj[i];
+        if (value != null && value > result) {
+          result = value;
+        }
+      }
+    } else {
+      // 如果传的iteratee是个对象 也会走这步
+      iteratee = cb(iteratee, context);
+      _.each(obj, function(v, index, list) {
+        computed = iteratee(v, index, list);
+        if (
+          computed > lastComputed ||
+          (computed === -Infinity && result === -Infinity)
+        ) {
+          result = v;
+          lastComputed = computed;
+        }
+      });
+    }
+    return result;
+  };
+  // min只是判断方向改变而已 其它基本一样
+  _.min = function(obj, iteratee, context) {
+    var result = Infinity,
+      lastComputed = Infinity,
+      value,
+      computed;
+    if (
+      iteratee == null ||
+      (typeof iteratee == "number" && typeof obj[0] != "object" && obj != null)
+    ) {
+      obj = isArrayLike(obj) ? obj : _.values(obj);
+      for (var i = 0, length = obj.length; i < length; i++) {
+        value = obj[i];
+        if (value != null && value < result) {
+          result = value;
+        }
+      }
+    } else {
+      iteratee = cb(iteratee, context);
+      _.each(obj, function(v, index, list) {
+        computed = iteratee(v, index, list);
+        if (
+          computed < lastComputed ||
+          (computed === Infinity && result === Infinity)
+        ) {
+          result = v;
+          lastComputed = computed;
+        }
+      });
+    }
+    return result;
+  };
+
+  // 需求：从 list中产生一个随机样本。传递一个数字表示从list中返回n个随机元素。否则将返回一个单一的随机项
+  // n多少 返回的数组length就为多少
+  // sample--样本（随机抽样）
+  _.sample = function(obj, n, guard) {
+    //  The internal `guard` argument allows it to work with `map`.
+    //  n是没有传入的 只返回一个值
+    if (n === null || guard) {
+      if (!isArrayLike(obj)) obj = _.values(obj);
+      return obj(_.random(obj.length - 1));
+    }
+    // 如果是个obj对象 拿到values数组
+    // underscore是支持整个对象 所以可以数组的时候也要考虑对象
+    var sample = isArrayLike(obj) ? _.clone(obj) : _.values(obj);
+    var length = getLength(sample);
+    // 这是边界处理值
+    //[0,length] 0<=n<=length 转化成就是 Math.max(Math.min(n, length), 0)的写法
+    n = Math.max(Math.min(m, length), 0);
+    var last = length - 1;
+    for (var index = 0; index < n; index++) {
+      var rand = _.random(index, last);
+      var temp = sample[index];
+      sample[index] = sample[rand];
+      sample[rand] = temp;
+    }
+    // 根据传入的n返回多少长度
+    return sample.slice(0, n);
+  };
+  _.clone = function(obj) {
+    if (!_.isObject) return obj;
+    // slice方法有浅拷贝的功能
+    return _.isArray(obj) ? obj.slice() : _.extend({}, obj);
+  };
+
+  // 实现一个乱序方法
+  _.shuffle = function(obj) {
+    return _.sample(obj, Infinity);
+  };
+
+  // 现在有这样一个需求：我们有对一个集合对象顺序排列 并且还可以支持属性值排序（对象的 ）====》就是参照这个属性值进行排序
+  // 返回一个排序后的list拷贝副本。如果传递iteratee参数，iteratee将作为list中每个值的排序依据。迭代器也可以是字符串的属性的名称进行排序的(比如 length)。
+  _.sortBy = function(obj, iteratee, context) {
+    var index = 0;
+    iteratee = cb(iteratee, context);
+    return _.pluck(
+      _.map(obj, function(value, key, list) {
+        // map里的回调iteratee函数必须需要return
+        // 键值为value
+        // 新创建一个对象 把item扔进去value 再筛选value出来 这个value就是item
+        // map是支持对象循环的
+        // map最终出来的result还是以数组形式
+        /*
+        _.map({one: 1, two: 2, three: 3}, function(num, key){ return num * 3; });
+        => [3, 6, 9]
+        */
+        return {
+          value: value,
+          index: index++,
+          criteria: iteratee(value, key, list)
+        };
+      }).sort(function(left, right) {
+        var a = left.criteria;
+        var b = right.criteria;
+        if (a !== b) {
+          // 要根据的属性值比较
+          if (a > b || a === void 0) return 1;
+          if (a < b || a === void 0) return -1;
+        }
+        // 如果a===b的情况 根据index
+        return left.index - right.index;
+      }),
+      "value"
+    );
+  };
+  // 🤔思考题each map区别  都是循环遍历  循环过程需要做啥操作就在循环体实现 唯一不懂是map需要返回一个结果数组
+  // 🤔需求：把一个集合分组为多个集合，通过 iterator 返回的结果(❗️❗️❗️)进行分组.
+  var group = function(behavior, partition) {
+    return function(obj, iteratee, context) {
+      var result = partition ? [[], []] : {};
+      iteratee = cb(iteratee, context);
+      // value 子项
+      _.each(obj, function(value, index) {
+        // return "one"["length"] 可能有这种返回值 如果没有就返回undefined
+        var key = iteratee(value, index, obj);
+        behavior(result, value, key);
+      });
+      return result;
+    };
+  };
+
+  // 给定一个list，和 一个用来返回一个在列表中的每个元素键 的iterator 函数（或属性名），
+  // 返回一个每一项索引的对象。和groupBy非常像，但是当你知道你的键是唯一的时候可以使用indexBy 。
+  // 根据返回的key值进行排序
+  _.indexBy = group(function(result, value, key) {
+    // 核心操作  ---- ❗️❗️❗️确实简单啊  以前就是用这种方式实现去重的 键值对唯一
+    result[key] = value;
+  });
+
+  // 把一个集合分组为多个集合，通过 iterator 返回的结果进行分组. 如果 iterator 是一个字符串而不是函数, 那么将使用 iterator 作为各元素的属性名来对比进行分组.
+  // key不是唯一索引
+  _.groupBy = group(function(result, value, key) {
+    if (has(result, key)) result[key].push(value);
+    // 怎么搞为数组,就是这样的操作  result[key]的值是一个数组
+    result[key] = [value];
+  });
 
   // 进行复制
   _.mixin(_);
+  // 如果underscore实现了原生的方法那就拓展该方法为目的 比如数组的·方法可用于对象❗️❗️❗️
+  // review实现完🈶必要记录成博文 map最后会返回是一个数组
 })();

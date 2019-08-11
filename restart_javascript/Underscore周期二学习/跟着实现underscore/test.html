@@ -1,26 +1,67 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>Document</title>
-</head>
-<body>
-   <div style="color: lightpink;width:200px;height:200px;">
-       这是测试....................
-   </div>
-   <script src="./underscore.js"></script>
-   <script>
-     //const arrayMap=  _.map([1,2,3],{name:1})
-    //  console.log(arrayMap)
-    //  debugger
-    //  const objMap=_.map({name:"vnues",age:22,height:180},{name:"李白"})
-    //  console.log(objMap)
-    // debugger
-    // var sum = _.reduce([1, 2, 3], function(memo, num){ return memo + num; }, 0);
-    // console.log(sum)
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Document</title>
+  </head>
+  <body>
+    <div style="color: lightpink;width:200px;height:200px;">
+      这是测试....................
+    </div>
+    <script src="./underscore.js"></script>
+    <script>
+      //const arrayMap=  _.map([1,2,3],{name:1})
+      //  console.log(arrayMap)
+      //  debugger
+      //  const objMap=_.map({name:"vnues",age:22,height:180},{name:"李白"})
+      //  console.log(objMap)
+      // debugger
+      // var sum = _.reduce([1, 2, 3], function(memo, num){ return memo + num; }, 0);
+      // console.log(sum)
+      // debugger
+      // _.sortedIndex([10, 20, 30, 40, 50], 35);
+      // var stooges = [{name: 'moe', age: 40}, {name: 'curly', age: 60}];
+      // _.sortedIndex(stooges, {name: 'larry', age: 50}, 'age');
 
-   </script>
-</body>
+      // 二分法的本质 就是起点和终点 中点都会慢慢靠一起
+      // var sortedIndex = function(array, value) {
+      //     var low = 0;
+      //     var high =array.length ;
+      //   while (low < high) {
+      //     var mid = Math.floor((low + high) / 2);
+      //     if (array[mid] < value) low = mid + 1;
+      //     else high = mid;
+      //   }
+
+      //   return low;
+      // };
+      // sortedIndex([10, 20, 30, 40, 50], 38)
+
+      // debugger
+      // console.log(_.indexOf([1,2,NaN],NaN,1))
+      // console.log(_.indexOf([1,2,NaN],NaN,8)
+      // console.log(_.lastIndexOf([1,2,3,4,5,6],3,1))
+      // debuggers
+      // console.log(_.invoke([[5, 1, 7], [3, 2, 1]], 'sort',1,2))
+      // debugger
+      // 这个item是我们传入的[1,2]
+      // 那么怎么自定义函数操作obj||list ？
+      // Calls the method named by methodName on each value in the list. Any extra arguments passed to invoke will be forwarded on to the method invocation.
+      // _.invoke([[5,1,7],[3,4,1]],function(item){
+      //       console.log(item)
+      //       console.log(arguments)
+      //   },[1,2])
+      // debugger
+      // console.log(_.max([1,2,3,4], {name:"vnues"}))
+      // 这样写才只有一个子项
+      //  _.shuffle([{one:'one',two:'two',three:'three',four:'four'}]);
+
+      // _.shuffle({one:'one',two:'two',three:'three',four:'four'});
+      debugger
+      _.groupBy(['one', 'two', 'three'], 'length');
+
+    </script>
+  </body>
 </html>
