@@ -59,8 +59,53 @@
       //  _.shuffle([{one:'one',two:'two',three:'three',four:'four'}]);
 
       // _.shuffle({one:'one',two:'two',three:'three',four:'four'});
-      debugger
-      _.groupBy(['one', 'two', 'three'], 'length');
+      // debugger
+      // _.groupBy(['one', 'two', 'three'], 'length');
+      // debugger
+      // _.uniq([1,2,3,4,5],true);
+
+      // var func = function(greeting){ return greeting + ': ' + this.name };
+      //     func = _.bind(func, {name: 'moe'}, 'hi');
+      //    // func();
+      //    console.log(func)
+      //     debugger
+      //     var fn = new func()
+      //     console.log(fn)
+
+      // var Person = function () {
+      //     this.alert = function () {
+      //       console.log(this.name)
+      //     }
+
+      //   }
+      //   var context = { name: "vnues" }
+      //   Person.bind(context)
+      //   console.log(Person.alert())
+      //   console.log(context.alert())
+      //   var boy = new Person()
+      //   console.log(boy.alert())
+      // debugger
+      // var add = function(a, b,c,d,e) {
+      //   return a + b+c+d+e;
+      // };
+      // add5 = _.partial(add, _,20,_,40);
+      // console.log(add5(10,30,50));  // 20
+      // 可以确定参数的顺序就是_.partial(add, _,20,_,40);
+      // var buttonView = {
+      //   label: "underscore",
+      //   onClick: function() {
+      //     alert("clicked: " + this.label);
+      //   },
+      //   onHover: function() {
+      //     console.log("hovering: " + this.label);
+      //   }
+      // };
+      // debugger
+      // _.bindAll(buttonView, "onClick", "onHover");
+      var fibonacci = _.memoize(function(n) {
+        return n < 2 ? n : fibonacci(n - 1) + fibonacci(n - 2);
+      });
+      fibonacci(10)
 
     </script>
   </body>

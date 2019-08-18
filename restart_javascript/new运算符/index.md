@@ -96,3 +96,61 @@ Constructor = [].shift.call(arguments);
 
 引申出对 this 这种缥缈不定的属性有 new apply call bind 可以操作
 所以反过来就是想操作 this 的时候就应该想到 new apply call bind
+
+
+
+
+
+### 再谈new
+
+ ```javascript
+
+   new 操作会干着三件事
+      function Animal() {
+        console.log("发出声音")
+       }
+      let animal  = {};
+      animal.__proto__ = Animal.prototype;
+      Animal.call(animal) // 这一步的操作是改变this指向，指向实例化对象 并且将其构造函数this关联的属性绑定给实例化对象
+      
+      func=function(){return executeBound(func, bound, context, this, args.concat(callArgs))}
+      
+      注意这个return 
+
+      1.创建一个空对象，并且 this 变量引用该对象，同时还继承了该函数的原型。
+
+      2.属性和方法被加入到 this 引用的对象中。 (前提构造函数是这样写的属性 this.a=.... 注意以前是这样想的会认为a是构造函数的属性 实际则不然 你可以说是属性 但不可以是说为a是构造函数的属性)
+
+      3.新创建的对象由 this 所引用，并且最后隐式的返回 this.
+ 
+
+ ```
+
+### 思考
+
+```javascript
+   
+  var Person=function(){
+     var name1="123"
+     this.name2="vnues"
+     this.alert=function(){}
+  }
+
+  // 上面name1是函数Person的变量 name2是属性 但是注意不是函数的属性  --记得区分清楚 
+
+Person.a='123345'  // a才是Person的属性
+
+  
+// 如果一个构造函数 return一个对象那么这个new 操作就没意义了(也不是没意义起码原型对象继承了) 本来是隐式返回this
+// 如果返回非对象类型 还是会继续隐式返回this的
+
+```
+
+！！！还有也不能说实例化对象继承构造函数的属性 本来name2就不是构造函数的属性
+而是应该这样说 属性和方法被加入到 this 引用的对象中
+
+所以不管三七二十一  支持es6！！！
+
+### 学习方式
+
+1.一个知识点就是反反复复回顾 到后面的最精简  才可以说你掌握了  温故而知新

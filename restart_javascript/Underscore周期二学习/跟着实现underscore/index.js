@@ -1,3 +1,6 @@
+// https://www.liaoxuefeng.com/wiki/1022910821149312/1056305537410240
+// 为啥review underscore 统一js函数式编程
+
 /*
    underscore文档即是需求 发现underscore考虑范围是整个对象
 */
@@ -231,7 +234,7 @@
 
    实际上cb处理函数就行 其它的处理感觉没什么意义
   */
-  // value ---> iteratee
+  // value ---> iteratee 把value当key传入过去
   var cb = function (value, context, argCount) {
     // 因为 _.iteratee = builtinIteratee 的缘故，_.iteratee !== builtinIteratee 值为 false，所以正常情况下 _.iteratee(value, context)` 并不会执行。
     // 但是如果我们在外部修改了 _.iteratee 函数，结果便会为 true，cb 函数直接返回 _.iteratee(value, context)。
@@ -986,16 +989,16 @@
   var reStrSymbol = /[^\ud800-\udfff]|[\ud800-\udbff][\udc00-\udfff]|[\ud800-\udfff]/g;
   // 需求🤔：将对象转化成数组
   _.toArray = function (obj) {
-    if (!obj) return [];// 如果传入的对象为空返回一个空数组
-    if (_.isArray(obj)) return slice.call(obj)
+    if (!obj) return []; // 如果传入的对象为空返回一个空数组
+    if (_.isArray(obj)) return slice.call(obj);
     // 对字符串的处理
     if (_.isString(obj)) {
-      return obj.match(reStrSymbol)
+      return obj.match(reStrSymbol);
     }
     // 类数组（数组也是类数组）的处理
-    if (isArrayLike(obj)) return _.map(obj, _.identity)
-    return _.values(obj)
-  }
+    if (isArrayLike(obj)) return _.map(obj, _.identity);
+    return _.values(obj);
+  };
 
   // 真值检测函数 -- predicated
   // 通过真值检测函数（要么true 要么false）来区分组 所以就存在两个组
@@ -1005,16 +1008,593 @@
   //   存在partition则为[[],[]] 也就是partition永远只有两组数组 这就是为啥result[pass]是个数组
   _.partition = group(function (result, value, pass) {
     // result[pass]是个数组
-    result[pass ? 0 : 1].push(value)
-  }, true)
+    result[pass ? 0 : 1].push(value);
+  }, true);
 
   // 🤔：拿到对象的长度 返回list的长度。
   // 🤔：好奇类数组的定义以及规律
   _.size = function (obj) {
-    if (obj == null) return 0
+    if (obj == null) return 0;
     return isArrayLike(obj) ? obj.length : _.keys(obj).length;
-  }
-  /* ------------------------- 数组方面的方法----------------------- */
+  };
+  /* -------------------------数组篇的方法----------------------- */
+  /* -----------------------数组篇考虑的作用对象就是类数组了 不用考虑普通对象------------------------- */
+
+  // 🤔underscore的guard的作用
+  // 就是个令牌开启map  The **guard** check  allows it to work with `_.map`.
+  // https://stackoverflow.com/questions/18639936/what-does-the-passed-parameter-guard-check-in-underscore-js-functions 看这里
+  // map传入回调函数的参数最起码有三个 保证了guard为true
+  /*
+  
+     var a = [ [1, 2, 3], [4, 5, 6] ];
+     // put this array though _.map and _.first
+     _.map(a, _.first); // [1, 4]
+  
+  */
+
+  // 需求👀：Returns the first element of an array. Passing n will return the first n elements of the array.
+  _.first = _.head = _.take = function (array, n, guard) {
+    if (array == null || array.length < 1) return n == null ? void 0 : [];
+    // guard的作用
+    if (n == null || guard) return arr[0];
+    // 如果返回全部
+    return _.initial(array, array.length - n);
+  };
+  // 默认：返回数组中除了最后一个元素外的其他全部元素。 在arguments对象上特别有用。传递 n参数将从结果中排除从最后一个开始的n个元素（注：排除数组后面的 n 个元素）。
+  // 跟first相反的
+  _.initial = function (array, n, guard) {
+    // 从0开始切
+    return slice.call(
+      array,
+      0,
+      Math.max(0, array.length - (n == null || guard ? 1 : n))
+    );
+  };
+  // Get the last element of an array. Passing **n** will return the last N
+  // values in the array.
+  _.last = function (array, n, guard) {
+    if (array == null || array.length < 1) return n == null ? void 0 : [];
+    if (n == null || guard) return array[array.length - 1];
+    return _.rest(array, Math.max(0, array.length - n));
+  };
+
+  // Returns everything but the first entry of the array. Aliased as `tail` and `drop`.
+  // Especially useful on the arguments object. Passing an **n** will return
+  // the rest N values in the array.
+  _.rest = _.tail = _.drop = function (array, n, guard) {
+    return slice.call(array, n == null || guard ? 1 : n);
+  };
+  // 返回一个除去所有false值的 array副本。 在javascript中, false, null, 0, "", undefined 和 NaN 都是false值.
+  _.compact = function (array) {
+    // _.filter(list, predicate, [context])
+    // 遍历list中的每个值，返回包含所有通过predicate真值检测的元素值。（注：如果存在原生filter方法，则用原生的filter方法。）
+    // _.filter最后返回一个数组
+    return _.filter(array, Boolean);
+  };
+  /*************数组扁平化**************/
+  // flatten 铺平
+  // 将一个嵌套多层的数组 array（数组） (嵌套可以是任何层数)转换为只有一层的数组。 如果你传递 shallow参数，数组将只减少一维的嵌套。
+  // _.flatten(array, [shallow])  shallow 浅 也就是做一层循环
+  var flatten = function (input, shallow, strict, output) {
+    // output 数组保存结果
+    // 即 flatten 方法返回数据
+    // idx 为 output 的累计数组下标
+    output = output || [];
+    var idx = output.length;
+    for (var i = 0, length = getLength(input); i < length; i++) {
+      // 数组篇考虑的作用对象就是类数组了 不用考虑普通对象
+      // 所以这也是一来不用判断是否为数组的原因
+      var value = input[i];
+      if (isArrayLike(value) && (_.isArray(value) || _.isArguments(value))) {
+        // Flatten current level of array or arguments object.
+        if (shallow) {
+          var j = 0,
+            len = value.length;
+          // 就做一层循环
+          while (j < len) output[idx++] = value[j++];
+        } else {
+          flatten(value, shallow, strict, output);
+          idx = output.length;
+        }
+      }
+      // strict的作用？？？
+      // 当strict为false时，只要是非数组对象，flatten都会直接添加到output数组中；如果strict为true，那么会无视input数组中的非类数组对象
+      // 本来是限制是操作数组 但是开启非严格的形式 值value就可以容纳对象 --->我是这样🤔的
+      else if (!strict) {
+        // 🤔：递归怎么写？
+        // 核心步骤  递归写的时候你先把核心步骤要实现的写出来再来考虑递归
+        output[idx++] = value;
+      }
+    }
+    return output;
+  };
+
+  // Flatten out an array, either recursively (by default), or just one level.
+  _.flatten = function (array, shallow) {
+    return flatten(array, shallow, false);
+  };
+
+  // flatten函数 不是_.flatten函数
+  // var flatten = function (input, shallow, strict, output)
+
+  // Returns a copy of the array with all instances of the values removed.
+  // _.without(array, *values)
+  // 需求🤔：传入value删除数组的value,注意是单个值，可传多个
+  // restArguments🤔就是个高阶函数
+  // _.restArguments(function, [startIndex])
+  _.without = restArguments(function (array, otherArrays) {
+    return _.difference(array, otherArrays);
+  });
+  //  需求🤔：传入value删除数组的value,value是数组,可传多个
+  // restArguments函数的作用无非就是让函数的最后一个参数变为rest参数（类似es6的rest）
+  _.difference = restArguments(function (array, rest) {
+    // 返回了铺平后的数组
+    rest = flatten(rest, true, true); // 铺平数组 只循环一层 开启严格原则(非类数组对象不能传入)
+    //  filter返回匹配的值 返回的是一个数组
+    return _.filter(array, function (value) {
+      return !_.contains(rest, value);
+    });
+  });
+  // ⚠️函数一遇到return就执行结束
+
+  // 🤔：怎么判断对象是相等
+  // 返回 array去重后的副本, 使用 === 做相等测试 underscore做相等测试
+
+  // 需求🤔：怎么实现数组去重
+
+  // 新建结果集数组result，遍历待去重数组，将每个遍历值在result数组中遍历检查，将不存在当前result中的遍历值压入result中，最后输出result数组。
+  // 对于对象的去重，我们知道{}==={}为false，所以使用===比较对象在实际场景中没有意义。
+  // 🤔：underscore的去重原理就是判断有没有排序好的 和使用indexOf优化内部循环,❗️❗️❗️并不支持成员为对象的去重
+  // 支持传入iteratte并且要求iteratte返回值通过返回的值判断有没有重复再去去重，返回原始数组的成员
+  // 如果要处理对象元素, 传参 iterator 来获取要对比的属性.
+  /*
+    
+     _.uniq([{name:"vnues",age:12},{name:"vnues",age:12}]);
+     并不支持成员为对象的去重
+  
+  */
+  _.uniq = _.unique = function (array, isSorted, iteratee, context) {
+    // 如果没有排序
+    // 就是用户第二个参数不一定直接传值为true
+    if (!_.isBoolean(isSorted)) {
+      context = iteratee;
+      iteratee = isSorted; //这个赋值就🈶意思了
+      isSorted = false;
+    }
+    /*
+     _.uniq([1,2,3,4,5],true);
+     
+     iteratee=true
+  
+     if (iteratee != null) iteratee = cb(iteratee, context);
+     // key 是true
+     return function (obj) {
+      return obj == null ? void 0 : obj[key];
+    };
+    
+    */
+    if (iteratee != null) iteratee = cb(iteratee, context);
+
+    var result = []; // 返回去重后的数组（副本）
+    var seen = []; // 用于存放已经最外层循环过的array成员的值便于下一次比较，或者用于存储computed值
+    // computed就是value
+    for (var i = 0, length = getLength(array); i < length; i++) {
+      var value = array[i],
+        computed = iteratee ? iteratee(value, i, array) : value;
+      // 已经排好序 并且没有传入iteratee
+      if (isSorted && !iteratee) {
+        // 如果i=0时，或者seen（上一个值）不等于当前值，放入去重数组中
+        if (!i || seen !== computed) result.push(value);
+        // 已经排好序的 那么只要判断前后是否不一样就行
+        // 此时seen存放是单个值而不是数组
+        seen = computed; // 保存当前值，用于下一次比较
+      }
+      // else if这里判断的iteratee的意义是什么
+      // 有传入iteratee必定传了isSorted 但是是真是假就不知道了
+      // _.contains是对内层循环的简化
+      // 这一步的判断含义是啥
+      else if (iteratee) {
+        // result不包含value的情况
+        if (!_.contains(seen, computed)) {
+          // 那这里为啥不是直接用result进行对比
+          // 经过iteratee处理过后的值
+          // [1,2,3,4,4,5,6]
+          // 我们去重是想要经过iteratee返回后的值进行判断
+          /*
+          _.uniq([1,2,3,4,8,10],true,function(value){return value%2})
+  
+           这也解释了为啥使用seen
+          */
+          seen.push(computed);
+          result.push(value); //返回原始值
+        }
+      }
+      // result不包含value的情况
+      else if (!_.contains(result, value)) {
+        result.push(value);
+      }
+    }
+    return result;
+  };
+
+  // 将 每个arrays中相应位置的值合并在一起。在合并分开保存的数据时很有用. 如果你用来处理矩阵嵌套数组时, _.zip.apply 可以做类似的效果。
+  _.zip = restArguments(_.unzip);
+
+  // 将 每个arrays中相应位置的值合并在一起。在合并分开保存的数据时很有用. 如果你用来处理矩阵嵌套数组时, _.zip.apply 可以做类似的效果。
+
+  _.unzip = function (array) {
+    // 作用对象是['moe', 'larry', 'curly'], [30, 40, 50], [true, false, false]这种的
+    // 找到最大的成员数组长度
+    //  _.max = function (obj, iteratee, context)
+    // 只要“&&”前面是true，无论“&&”后面是true还是false，结果都将返“&&”后面的值;
+    var length = (array && _.max(array, getLength).length) || 0;
+    var result = Array(length);
+    for (var index = 0; index < length; index++) {
+      result[index] = _.pluck(array, index);
+    }
+    return result;
+  };
+
+  // 需求🤔：如何将数组转化为对象
+  // 反过来： 把list(任何可以迭代的对象)转换成一个数组，在转换 arguments 对象时非常有用。-- toArray
+  // 将数组转换为对象。传递任何一个单独[key, value]对的列表，或者一个键的列表和一个值得列表。 如果存在重复键，最后一个值将被返回。
+  /*
+   场景是这样的，有些特殊：
+     _.object(['moe', 'larry', 'curly'], [30, 40, 50]);
+           => {moe: 30, larry: 40, curly: 50}
+
+         _.object([['moe', 30], ['larry', 40], ['curly', 50]]);
+         => {moe: 30, larry: 40, curly: 50}
+  
+  */
+  _.object = function (list, values) {
+    var result = {};
+    for (var i = 0, length = getLength(list); i < length; i++) {
+      if (values) {
+        result[list[i]] = values[i];
+      } else {
+        result[list[i][0]] = list[i][1];
+      }
+    }
+    return result;
+  };
+
+  // 最难最有价值的一部分
+  /***********************与函数有关的函数（Function (uh, ahem) Functions*****************************************/
+
+  // 🤔：什么是函数式编程：
+  /*
+   
+   我们需要先知晓什么是函数式编程? 函数式编程是一种编程风格，它可以将函数作为参数传递，并返回没有副作用的函数
+   
+   而什么是偏函数应用(partial application), 通俗点理解,
+   固定一个函数的一个或者多个参数，也就是将一个 n 元函数转换成一个 n - x 元函数；
+   函数柯里化(curry)的理解，`可以概括为将一个多参数函数转换成多个单参数函数`，
+   也就是将一个 n 元函数转换成 n 个一元函数。
+
+
+
+  */
+
+  // bind的实现
+  // 绑定函数 function 到对象 object 上, 也就是无论何时调用函数, 函数里的 this 都指向这个 object. 任意可选参数 arguments 可以传递给函数 function , 可以填充函数所需要的参数, 这也被称为 partial application。对于没有结合上下文的partial application绑定，请使用partial。
+
+  // 指定原型对象 创建新对象的函数Object.create方法
+
+  // 声明一个空的构造函数
+  // 一些顶级原型对象的基本属性 是永远会继承的 想甩开也甩不掉 也没必要甩开
+  var Ctor = function () { };
+  var baseCrete = function (prototype) {
+    if (!_.isObject(prototype)) return {};
+    if (nativeCreate) return nativeCreate(prototype);
+    // 突然到这步有点懵逼 没反应过来
+    // 突然想到prototype对象的属性可能没有用this去声明 也反过来这个this声明的属性可能就不是prototype的属性
+    // 因为this是动态绑定的  ❗️❗️❗️还有就是只要你是挂载到原型上的属性 都会被继承 但是为啥怎么继承
+    // 还得深究  跟new 构造函数 实例化对象继承构造函数属性不一样 new是通过操作this实现的
+    // 原型怎么实现继承的不知道了 反正就是规定 我们的属性会继承来自原型对象 只要是原型上的属性
+    // 比如prototype.a  不用管原型对象是否具有this啥啥啥的 这一点确实方便
+    // 反过来思考下🤔什么是对象的属性 a.b就是  {name:"vnues",age:22}  name age就是对象属性  哎呀山路十八弯的感觉
+    Ctor.prototype = prototype;
+    var result = new Ctor();
+    Ctor.prototype = null; // 手动回收资源
+    return result;
+  };
+
+  // _.bind(...)执行bind函数
+  // bind的实现我用apply去实现它
+  // 怎么绑定参数上去
+  // ❗️❗️❗️当前函数的 this 是在 数被调用执行的时候才确定
+  // 正是由于这个原因，才导致一个函数内部的 hi 到底指向谁是非常灵活且不确定的
+
+  // 决定是否把一个函数作为构造函数或者普通函数调用
+  // Determines whether to execute a function as a constructor
+  // or a normal function with the provided arguments.
+
+  /*
+  
+  
+     sourceFunc --->func   var func = function(greeting){ return greeting + ': ' + this.name }
+   // 觉得这样子处理这种特殊情况有意义吗 有意义
+  // 这一步也是会并且将其构造函数this关联的属性绑定给实例化对象
+    var result = sourceFunc.apply(self, args); // 调用sourceFunc函数  函数内部this指向self
+    一般构造函数没有返回值所以都是走return else
+    ❗️我认为构造函数中类似这种this.a不是构造函数的属性
+    所以这种实例化对象与构造函数之间需要用名词表示吧  
+
+    ：并且将其构造函数this关联的属性绑定给实例化对象
+
+  */
+
+  var executeBound = function (
+    sourceFunc,
+    boundFunc,
+    context,
+    callingContext,
+    args
+  ) {
+    // 注意是双括号
+    if (!(callingContext instanceof boundFunc)) {
+      return sourceFunc.apply(context, args);
+    }
+    // 可以说是代替new操作了
+    var self = baseCrete(sourceFunc.prototype); // 创建一个新对象 对象的原型指向sourceFunc.prototype 补充一点❗️❗️❗️ 你有能力指向了这个原型 说明就继承了这个属性 （脑海里得反映出这种双重思维）
+    /*
+         
+       sourceFunc=function(){
+           this.name="111"
+           this.alert=function(){
+              console.log(this.name)
+           }
+       }
+      
+    */
+    // 怎么会返回result
+    // 总感觉apply是有返回值的
+    //     这一步也是会并且将其构造函数this关联的属性绑定给实例化对象
+
+    var result = sourceFunc.apply(self, args);
+    // 返回实例化对象
+    if (_.isObject(result)) return result;
+    return self; // 返回空对象
+  };
+
+  // Create a function bound to a given object (assigning `this`, and arguments,
+  // optionally). Delegates to **ECMAScript 5**'s native `Function.bind` if
+  // available.
+  // _.bind=function(){...} <===最终形式
+  // 执行bind会返回一个函数
+  /*
+     var func = function(greeting){ return greeting + ': ' + this.name };
+          func = _.bind(func, {name: 'moe'}, 'hi');
+          func();
+  */
+  // ❗️❗️❗️ 被绑定过context的函数(就是func)作为构造函数调用时的情况
+  // 假如我们的函数func绑定了this为context 那么我们想要把func当做构造函数的时候是不是要考虑this指向
+  // 如果executeBound没有判断这种情况 会发生什么 我们来尝试下
+  /*
+   
+    首先
+      var func = function(greeting){ return greeting + ': ' + this.name };
+          func = _.bind(func, {name: 'moe'}, 'hi');
+
+      func长什么样子
+      
+     func---> restArguments(function (callArgs) {
+      return executeBound(func, bound, context, this, args.concat(callArgs));
+    });
+    
+    也即是最后func长成这样子--> function(){return executeBound(func, bound, context, this, args.concat(callArgs))}
+
+    那么执行 var fn1 = new func会发生什么?
+    
+    new 操作会干着三件事
+      function Animal() {
+        console.log("发出声音")
+       }
+      let animal  = {};
+      animal.__proto__ = Animal.prototype;
+      Animal.call(animal) // 这一步的操作是改变this指向，指向实例化对象 并且将其构造函数this关联的属性绑定给实例化对象
+      
+      func=function(){return executeBound(func, bound, context, this, args.concat(callArgs))}
+      
+      注意这个return 
+
+      1.创建一个空对象，并且 this 变量引用该对象，同时还继承了该函数的原型。
+
+      2.属性和方法被加入到 this 引用的对象中。 (前提构造函数是这样写的属性 this.a=.... 注意以前是这样想的会认为a是构造函数的属性 实际则不然 你可以说是属性 但不可以是说为a是构造函数的属性)
+
+      3.新创建的对象由 this 所引用，并且最后隐式的返回 this.
+      
+       如果一个构造函数 return一个对象那么这个new 操作就没意义了（也不是没意义起码原型对象继承了） 本来是隐式返回this
+       如果返回非对象类型 还是会继续隐式返回this的
+
+       所以new操作完后还是最后走executeBound这步  所以要在executeBound内进行操作（实例化对象继承构造函数（的属性xxxx） 这句话不能这样说 而是属性和方法被加入到 this 引用的对象中 ）
+       new
+  */
+  // bind由于是偏函数 所以需要保存部分变量 需要用到去保存部分变量 这样这部分变量就不用再传入了
+  // 还要考虑一个特殊场景 就是用bind绑定后返回的函数（注意这句话）来充当构造对象 这时候该怎么兼容
+  // 因为bind绑定后返回的函数跟闭包肯定有关联 `❗️❗️❗️  有待考究
+  // 也就是new操作会被影响   这就是为啥要写多层判断兼容
+  // es5中bind也是做了这层兼容的
+  // ❗️❗️❗️用bind绑定过后返回的函数跟普通的函数一样 new出来的实例不会奇怪】、
+  // 具体看看别人的bind如何实现再来评价` es5中bind也是做了这层兼容的`
+  // 首先要明白 他是怎么固定this指向的 用闭包 _.bind(...)=bound--->func
+  // func()---> function(){return sourceFunc.apply(context, args);} 实际构造函数是这样 你说要不要兼容❗️❗️❗️
+  // 是这样写的
+
+  _.bind = restArguments(function (func, context, args) {
+    if (!_.isFunction(func))
+      throw new TypeError("Bind must be   on a function");
+    var bound = restArguments(function (callArgs) {
+      // sourceFunc,boundFunc,context,callingContext,args
+      // args拼接这个callArgs参数
+      // bind函数执行会形成一个闭包保存传进来的参数 args
+      // 之后返回一个函数func
+      // 这个this的应用场景函数this场景  非严格模式下 window是调用者 所以this指向window
+      // new func()时候 this指向的boundFunc的构造实例的
+      // _.bind(..)-->func -->就是bound ---> new bound()-->三个步骤
+      /*
+      function Animal() {
+        console.log("发出声音")
+       }
+      let animal  = {};
+      animal.__proto__ = Animal.prototype;
+      Animal.call(animal) 
+      这里构造函数内部的this就是执行这个实例化构造函数
+      --->就是运行executeBound(func, bound, context, this, args.concat(callArgs))
+     */
+
+      // 因为这步 return executeBound(func, bound, context, this, args.concat(callArgs));是构造函数内部的代码 所以自然而然这块指向实例化对象
+      return executeBound(func, bound, context, this, args.concat(callArgs));
+    });
+    console.log(bound);
+    return bound;
+  });
+
+  // 偏函数有这么些情况 一是假如你有参数调用 多次传入相同的参数 这时候就是要使用偏函数啦
+  /*
+   首先写法一和写法效果一样  等价的 不同的是写法二可以保存变量 闭包的写法
+    1.var alert =function(){
+       alert("alert")
+    }
+
+   bound=function(){
+        alert("alert")
+   }
+  2. var alert=function(){
+      return bound()
+   }
+  
+  */
+  // Partially apply a function by creating a version that has had some of its
+  // arguments pre-filled, without changing its dynamic `this` context. _ acts
+  // as a placeholder by default, allowing any combination of arguments to be
+  // pre-filled. Set `_.partial.placeholder` for a custom placeholder argument.
+  /*
+      var add = function(a, b,c,d,e) {
+        return a + b+c+d+e;
+      };
+      add5 = _.partial(add, _,20,_,40);
+      console.log(add5(10,30,50));  // 20
+      // 可以确定参数的顺序就是_.partial(add, _,20,_,40);
+      
+  
+  */
+  // restArguments(function (func, boundArgs)) 执行restArguments返回一个函数
+  // 跟Bind一样都是偏函数 唯一不同就是this不改变
+  _.partial = restArguments(function (func, boundArgs) {
+    // 占位符
+    var placeholder = _.partial.placeholder;
+    var bound = function () {
+      // 标记arguments参数是不是全的
+      var position = 0,
+        length = boundArgs.length;
+      var args = Array(length);
+      // 顺序是按照boundArgs--> _,20,_,40
+      // 然后调用bound有剩余的参数 通过position标记
+      for (var i = 0; i < length; i++) {
+        args[i] =
+          boundArgs[i] === placeholder ? arguments[position++] : boundArgs[i];
+      }
+
+      // 最后这一步把剩余的参数push上去
+      while (position < arguments.length) args.push(arguments[position++]);
+      // 这样子传bound代表构造函数
+      // 🤔🤔🤔：为什么需要考虑executeBound
+      /*
+        
+      首先写法一和写法效果一样  等价的 不同的是写法二可以保存变量 闭包的写法
+            1.var alert =function(){
+              alert("alert")
+            }
+
+          bound=function(){
+                alert("alert")
+          }
+          2. var alert=function(){
+              return bound()
+          }
+      // 如果考虑到return影响new 我就是写法一就行啦
+      // 🤔🤔🤔如果是写法一的会是什么样子
+      // 最终还是会遇到 return sourceFunc.apply(context, args); 所以逃不过return命运
+      // 一个构造函数内部有return就会影响到new
+      // 讲Bind分析过程🤔🤔🤔为什么需要考虑executeBound我可能分析错了 不要全信啊！！！
+      */
+      return executeBound(func, bound, this, this, args);
+    };
+    return bound;
+  });
+  // 声明占位符
+  _.partial.placeholder = _;
+
+  // Bind a number of an object's methods to that object. Remaining arguments
+  // are the method names to be bound. Useful for ensuring that all callbacks
+  // defined on an object belong to it.
+  // 把methodNames参数指定的一些方法绑定到object上，这些方法就会在对象的上下文环境中执行。
+  // 绑定函数用作事件处理函数时非常便利，否则函数被调用时this一点用也没有。methodNames参数是必须的。
+  _.bindAll = restArguments(function (obj, keys) {
+    // 将一个嵌套多层的数组 array（数组） (嵌套可以是任何层数)转换为只有一层的数组。 如果你传递 shallow参数，数组将只减少一维的嵌套。
+    // keys是个数组 因为restArguments的缘故
+    // flatten是作用于类数组的
+    keys = flatten(keys, false, false);
+    var index = keys.length;
+    if (index < 1) throw new Error("bindAll must be passed function names");
+    while (index--) {
+      var key = keys[index];
+      obj[key] = _.bind(obj[key], obj);
+    }
+  });
+
+  // https://zhuanlan.zhihu.com/p/27642433
+
+  // 需求🤔🤔🤔memoize 优化 实现一个记忆函数用于缓存
+  // Memoize an expensive function by storing its results.
+  // Memoizes方法可以缓存某函数的计算结果。对于耗时较长的计算是很有帮助的
+  // 函数可以将之前的操作结果缓存在某个对象中，当下次调用时，如果遇到相同的参数，就直接返回缓存中的数据，从而避免无谓的重复运算。这种优化被称作记忆。
+  /*
+    
+  var fibonacci = _.memoize(function(n) {
+     return n < 2 ? n: fibonacci(n - 1) + fibonacci(n - 2);
+    });
+    fibonacci(10)
+     return n < 2 ? n: fibonacci(n - 1) + fibonacci(n - 2);
+     它是这样子的递归写法 这样子就会造成每次重新计算 刚开始看还有点懵逼fibonacci(n - 1) + fibonacci(n - 2)
+     ❗️❗️❗️这样子的写法会造成每次都会重新计算
+     这也是要去理解斐波那契数列❗️❗️❗️
+     尾递归又是什么哈哈哈❓❓❓尾调用的概念非常简单，一句话就能说清楚，就是指某个函数的最后一步是调用另一个函数。
+     函数调用自身，称为递归。如果尾调用自身，就称为尾递归。
+     // https://juejin.im/post/5ab9a3ab518825558154fe83
+     所以使用memoize缓存
+  */
+  // ❓❓❓一个疑问怎么定义hasher
+  _.memoize = function (func, hasher) {
+    var memoize = function (key) {
+      var cache = memoize.cache;
+
+      //  JSON.stringify来处理Key值效果一样
+      // Memoizes方法可以缓存某函数的计算结果。对于耗时较长的计算是很有帮助的。
+      // 如果传递了 hashFunction 参数，就用 hashFunction 的返回值作为key存储函数的计算结果。
+      // hashFunction 默认使用function的第一个参数作为key。memoized值的缓存 可作为 返回函数的cache属性。
+      // 自定义key值
+      var address = "" + (hasher ? hasher.apply(this, arguments) : key);
+      if (!has(cache, address)) cache[address] = func.apply(this, arguments);
+      return cache[address];
+    };
+    memoize.cache = {};
+    return memoize;
+  };
+
+
+  // Delays a function for the given number of milliseconds, and then calls
+  // it with the arguments supplied.
+  _.delay = restArguments(function (func, wait, args) {
+    return setTimeout(function () {
+      return func.apply(null, args);
+    }, wait);
+  });
+
+  // 高阶函数使用可能出现函数嵌套 嵌套显然不行 得使用组合的方式  这些都是函数式编程的范畴啦❗️❗️❗️
+  // 序列化和存储有关
 
   // 进行复制
   _.mixin(_);
