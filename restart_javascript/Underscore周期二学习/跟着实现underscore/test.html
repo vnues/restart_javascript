@@ -102,11 +102,97 @@
       // };
       // debugger
       // _.bindAll(buttonView, "onClick", "onHover");
-      var fibonacci = _.memoize(function(n) {
-        return n < 2 ? n : fibonacci(n - 1) + fibonacci(n - 2);
-      });
-      fibonacci(10)
+      // var fibonacci = _.memoize(function(n) {
+      //   return n < 2 ? n : fibonacci(n - 1) + fibonacci(n - 2);
+      // });
+      // fibonacci(10)
+      //           debugger
+      //           _.defer(function(){ alert('deferred'); });
 
+      // (function() {
+      //      // 用随机数的方式来模拟一个获取用户信息的方法
+      //     var getLogin = function() {
+      //     var a = parseint(Math . random() * 10) . toFixe(O)) ;
+      //     if (a % 2 == 0) {
+      //     return { login : false }
+      //     }
+      //     return {
+      //     login: txrue,
+      //     userinfo : {
+      //     nickname :'jake',
+      //     vip : 11,
+      //     userid:'666666'
+      //         }
+      //        }
+      //     }
+      //     var withLogin = function(basicFn) {
+      //     var loginInfo = getLogin() ;
+      //     // 将 loginInfo 参数的形式传入基础函数中
+      //     return basicFn.bind(null, loginInfo);
+      //     }
+      //     window.withLogin = withLogin;
+      // })
+      // 但是组合函数的基本就是函数执行后作为返回值 具体返回值是值还是函数看执行函数
+      // 还有要实现那种让某个函数具备某能力（也就是最后一个函数不执行 这就compose的特殊情况）
+      // 调用形式 e(g(f(h))) 
+      function compose(...args) {
+        var arity = args.length - 1;
+        var tag = false;
+        if (typeof args[arity] === "function") {
+          tag = true;
+        }
+        if (arity > 1) {
+          var param = args.pop(args[arity]); // 先去除第一个函数A
+          arity--;
+          var newParam = args[arity].call(args[arity], param); // 执行完
+          args.pop(args[arity]);// 拿出来
+          args.push(newParam); // 把返回的结果push进去
+          return compose(...args);
+        } else if (arity === 1) {
+          if (!tag) {
+            return args[0].bind(null, args[1]);
+          } else {
+            return args[0].call(null, args[1]);
+          }
+        }
+      }
+      // 从右到左传入参数
+      // 登陆
+      function login(user,age) {
+        console.log("login " + user,age);
+      }
+      // 注册
+      function resgister(user) {
+        console.log("resgister " + user);
+      }
+      // 抽离出来的中间函数
+      function wrapUser(Wrapfunc) {
+        let Newfunc = (age) => {
+          // let user = localStorage.getItem("user");
+          let user = "vnues";
+          Wrapfunc(user,age);
+        };
+        return Newfunc;
+      }
+      function wrapConsole(func) {
+        let Newfunc = () => {
+          // let user = localStorage.getItem("user");
+         let age=22
+          func(age);
+        };
+        return Newfunc;
+      }
+      // 调用
+      // debugger 最后的结果满足不了
+      debugger
+      login = compose(
+        wrapConsole,
+        wrapUser,
+        login
+      );
+  
+      login();
+     //  resgister();
     </script>
   </body>
 </html>

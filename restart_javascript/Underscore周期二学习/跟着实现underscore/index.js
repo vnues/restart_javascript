@@ -1276,7 +1276,28 @@
 
   */
 
-  // bind的实现
+  // bind的实现  bind是偏函数并不会去调用一次绑定的函数A（就死函数A会去执行一次）
+  // bind()方法创建一个新的函数，在bind()被调用时，这个新函数的this被bind的第一个参数指定，其余的参数将作为新函数的参数供调用时使用。
+
+  // bind 的作用对象也是函数 跟apply call一样 不同是apply call是去调用目标函数
+  /*
+    var module = {
+   x: 42,
+   getX: function() {
+     return this.x;
+   }
+ }
+ 
+ var unboundGetX = module.getX;
+ console.log(unboundGetX()); // The function gets invoked at the global scope
+ // expected output: undefined
+ 
+ var boundGetX = unboundGetX.bind(module);
+ console.log(boundGetX());
+ // expected output: 42
+ 
+  
+  */
   // 绑定函数 function 到对象 object 上, 也就是无论何时调用函数, 函数里的 this 都指向这个 object. 任意可选参数 arguments 可以传递给函数 function , 可以填充函数所需要的参数, 这也被称为 partial application。对于没有结合上下文的partial application绑定，请使用partial。
 
   // 指定原型对象 创建新对象的函数Object.create方法
@@ -1584,7 +1605,6 @@
     return memoize;
   };
 
-
   // Delays a function for the given number of milliseconds, and then calls
   // it with the arguments supplied.
   _.delay = restArguments(function (func, wait, args) {
@@ -1596,8 +1616,281 @@
   // 高阶函数使用可能出现函数嵌套 嵌套显然不行 得使用组合的方式  这些都是函数式编程的范畴啦❗️❗️❗️
   // 序列化和存储有关
 
+  // 需求🤔🤔：延迟调用function直到当前调用栈清空为止，类似使用延时为0的setTimeout方法。对于执行开销大的计算和无阻塞UI线程的HTML渲染时候非常有用。 如果传递arguments参数，当函数function执行时， arguments 会作为参数传入。
+
+  // Defers a function, scheduling it to run after the current call stack has
+  // cleared.
+
+  // 首先要明白_.partial函数的使用形式跟含义
+  // 在这里就是局部应用一个函数填充在任意个数的 参数
+  // 这个函数就是_.delay delay参数是func, wait, args, _是占位func wait是1
+  _.defer = _.partial(_.delay, _, 1);
+  /*
+    思考 setTimeOut0是什么作用
+   【 js 基础 】 setTimeout(fn, 0) 的作用
+    总结：setTimeout(fn,0)的含义是，指定某个任务在主线程最早可得的空闲时间执行，也就是说，尽可能早得执行。它在"任务队列"的尾部添加一个事件，因此要等到主线程把同步任务和"任务队列"现有的事件都处理完，才会得到执行。在某种程度上，我们可以利用setTimeout(fn,0)的特性，修正浏览器的任务顺序。
+    🤔：
+    零延迟 (Zero delay) 并不是意味着回调会立即执行。在零延迟调用 setTimeout 时，其并不是过了给定的时间间隔后就马上执行回调函数。其等待的时间基于队列里正在等待的消息数量。也就是说，setTimeout()只是将事件插入了任务队列，必须等到当前代码（执行栈）执行完，主线程才会去执行它指定的回调函数。要是当前代码耗时很长，有可能要等很久，所以并没有办法保证回调函数一定会在setTimeout()指定的时间执行。
+    也就是意思是等待同步函数执行完以后就执行
+    延迟调用function直到当前调用栈清空为止❓❓❓ 函数调用栈吧 并不是任务（消息）队列
+    举个🌰：
+    (function(){console.log(1)})()
+    for(var i=0;i<1000;i++){
+      console.log(i)
+    }
+     setTimeout(function(){console.log("setTimeout")}, 0)
+    (function(){console.log(2)})()
+  */
+  // 节流
+  // Returns a function, that, when invoked, will only be triggered at most once
+  // during a given window of time. Normally, the throttled function will run
+  // as much as it can, without ever going more than once per `wait` duration;
+  // but if you'd like to disable the execution on the leading edge, pass
+  // `{leading: false}`. To disable execution on the trailing edge, ditto.
+  _.throttle = function (func, wait, options) {
+    var timeout, context, args, result;
+    var previous = 0;
+    if (!options) options = {};
+
+    var later = function () {
+      previous = options.leading === false ? 0 : _.now();
+      timeout = null;
+      result = func.apply(context, args);
+      if (!timeout) context = args = null;
+    };
+
+    var throttled = function () {
+      var now = _.now();
+      if (!previous && options.leading === false) previous = now;
+      var remaining = wait - (now - previous);
+      context = this;
+      args = arguments;
+      if (remaining <= 0 || remaining > wait) {
+        if (timeout) {
+          clearTimeout(timeout);
+          timeout = null;
+        }
+        previous = now;
+        result = func.apply(context, args);
+        if (!timeout) context = args = null;
+      } else if (!timeout && options.trailing !== false) {
+        timeout = setTimeout(later, remaining);
+      }
+      return result;
+    };
+
+    throttled.cancel = function () {
+      clearTimeout(timeout);
+      previous = 0;
+      timeout = context = args = null;
+    };
+
+    return throttled;
+  };
+  // 防抖
+  // Returns a function, that, as long as it continues to be invoked, will not
+  // be triggered. The function will be called after it stops being called for
+  // N milliseconds. If `immediate` is passed, trigger the function on the
+  // leading edge, instead of the trailing.
+  _.debounce = function (func, wait, immediate) {
+    var timeout, result;
+
+    var later = function (context, args) {
+      timeout = null;
+      if (args) result = func.apply(context, args);
+    };
+
+    var debounced = restArguments(function (args) {
+      if (timeout) clearTimeout(timeout);
+      if (immediate) {
+        var callNow = !timeout;
+        timeout = setTimeout(later, wait);
+        if (callNow) result = func.apply(this, args);
+      } else {
+        timeout = _.delay(later, wait, this, args);
+      }
+
+      return result;
+    });
+
+    debounced.cancel = function () {
+      clearTimeout(timeout);
+      timeout = null;
+    };
+
+    return debounced;
+  };
+  // 需求🤔：以整数形式获取当前时间戳的一种(可能更快)方法
+  _.now =
+    Date.now ||
+    function () {
+      return new Date().getTime();
+    };
+
+  // 高阶函数让函数具有某种能力 像debounce
+
+  //before_.before(count, function)
+  //创建一个函数,调用不超过count 次。 当count已经达到时，最后一个函数调用的结果 是被记住并返回 。
+  _.before = function (times, func) {
+    var memo;
+    return function () {
+      if (--times > 0) {
+        memo = func.apply(this, arguments);
+      }
+      if (times <= 1) func = null;
+      return memo;
+    };
+  };
+
+  /*
+  
+     once_.once(function) 
+     创建一个只能调用一次的函数。重复调用改进的方法也没有效果，
+     只会返回第一次执行时的结果。 作为初始化函数使用时非常有用, 
+     不用再设一个boolean值来检查是否已经初始化完成.❗️❗️❗️这一点确实重要 而具体实现是用闭包实现的 然后也不是布尔值判断而是--
+     突然明白闭包的重要性 并且有时候可以代替声明全局变量
+
+  
+  */
+  // _.partial这个偏函数作用固定一个函数的一些参数，然后产生另一个更小元的函数
+  // 也就是本质上 _.partial(_.before, 2)执行完返回的还是_.before只不过我们可以少传参数而已 是这个重要❗️❗️❗️要认清楚
+  // 然后执行var fn=_.once(...)=_.before(2,fn)
+  // fn
+  // fn
+  // 偏函数固定哪一个函数就看传入的第一个函数
+  // 🤔用isFirst判断确实Low --更适合 运算符更好 其实效果图一样的
+  _.once = _.partial(_.before, 2);
+
+  // 需求🤔：判断对象是否是为空
+  // Is a given array, string, or object empty?
+  // An "empty" object has no enumerable own-properties.
+  _.isEmpty = function (obj) {
+    if (obj == null) return true;
+    if (
+      isArrayLike(obj) &&
+      (_.isArray(obj) || _.isString(obj) || _.isArguments(obj))
+    )
+      return obj.length === 0;
+    return _.keys(obj).length === 0;
+  };
+  // 需求🤔：判断对象属性值为空？
+
+
+  // 组合函数🤔
+
+  // Returns a function that is the composition of a list of functions, each
+  // consuming the return value of the function that follows.
+  // 从➡️到⬅️ 从右到左
+  // underscore的compose是处理这种情况的f(g(h()))
+  // 就是把函数执行完后当做参数
+  // 但是很多时候我是想让我这个A函数具备几种能力重新返回新的函数A  并且最后不会去执行我的函数A
+  // f(g(h()))实际上这种写法在开发中常常用到 我们使用compose提升下代码可读性
+  // 其实弄成这样也行的f(g(h)）最后判断A函数不执行就行啦  🤔不用考虑那么复杂的
+  // 不对f()最后return function作为参数 效果一样的  来实验下
+  /*
+  
+      // 从右到左传入参数
+      // 登陆
+      function login(user) {
+        console.log("login " + user);
+      }
+      // 注册
+      function resgister(user) {
+        console.log("resgister " + user);
+      }
+      // 抽离出来的中间函数
+      function wrapUser(Wrapfunc) {
+        let Newfunc = () => {
+         // let user = localStorage.getItem("user");
+         let user ="vnues"
+          Wrapfunc(user);
+        };
+        return Newfunc;
+      }
+      // 调用
+     // debugger 最后的结果满足不了
+      login =  _.compose(wrapUser,login)
+      resgister = _.compose(wrapUser,resgister)
+      login();
+      resgister();
+
+  */
+  /* 
+    // 所以说underscore的compose还是只适合f(g(h()))这种方式 执行后的函数结果当做参数继续传入
+    // 调用形式 e(g(f(h))) 
+    function compose(...args) {
+      var arity = args.length - 1;
+      var tag = false;
+      if (typeof args[arity] === "function") {
+        tag = true;
+      }
+      if (arity > 1) {
+        var param = args.pop(args[arity]); // 先去除第一个函数A
+        arity--;
+        var newParam = args[arity].call(args[arity], param); // 执行完
+        args.pop(args[arity]);// 拿出来
+        args.push(newParam); // 把返回的结果push进去
+        return compose(...args);
+      } else if (arity === 1) {
+        if (!tag) {
+          return args[0].bind(null, args[1]);
+        } else {
+          return args[0].call(null, args[1]);
+        }
+      }
+    }
+    // 从右到左传入参数
+    // 登陆
+    function login(user, age) {
+      console.log("login " + user, age);
+    }
+    // 注册
+    function resgister(user) {
+      console.log("resgister " + user);
+    }
+    // 抽离出来的中间函数
+    function wrapUser(Wrapfunc) {
+      let Newfunc = (age) => {
+        // let user = localStorage.getItem("user");
+        let user = "vnues";
+        Wrapfunc(user, age);
+      };
+      return Newfunc;
+    }
+    function wrapConsole(func) {
+      let Newfunc = () => {
+        // let user = localStorage.getItem("user");
+        let age = 22
+        func(age);
+      };
+      return Newfunc;
+    }
+    // 调用
+    // debugger 最后的结果满足不了
+    debugger
+    login = compose(
+      wrapConsole,
+      wrapUser,
+      login
+    );
+  
+    login();
+    //  resgister();
+    */
+  _.compose = function () {
+    var args = arguments;
+    var start = args.length - 1;
+    return function () {
+      var i = start;
+      var result = args[start].apply(this, arguments);
+      while (i--) result = args[i].call(this, result);
+      return result; // 不return一个function而是所有传入的函数都会执行？
+    };
+  };
+
+  // 递归实现
   // 进行复制
   _.mixin(_);
   // 如果underscore实现了原生的方法那就拓展该方法为目的 比如数组的方法可用于对象❗️❗️❗️
-  // review实现完🈶必要记录成博文 map最后会返回是一个数组
+  // review实现完🈶必要记录成博文
 })();

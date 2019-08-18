@@ -1172,6 +1172,10 @@
 
   // Defers a function, scheduling it to run after the current call stack has
   // cleared.
+
+  // 首先要明白_.partial函数的使用形式跟含义
+  // 在这里就是局部应用一个函数填充在任意个数的 参数
+  // 这个函数就是_.delay delay参数是func, wait, args, _是占位func wait是1
   _.defer = _.partial(_.delay, _, 1);
 
   // Returns a function, that, when invoked, will only be triggered at most once
@@ -1269,6 +1273,103 @@
 
   // Returns a function that is the composition of a list of functions, each
   // consuming the return value of the function that follows.
+  // 从➡️到⬅️ 从右到左
+  // underscore的compose是处理这种情况的f(g(h()))
+  // 就是把函数执行完后当做参数
+  // 但是很多时候我是想让我这个A函数具备几种能力重新返回新的函数A  并且最后不会去执行我的函数A
+  // f(g(h()))实际上这种写法在开发中常常用到 我们使用compose提升下代码可读性
+  // 其实弄成这样也行的f(g(h)）最后判断A函数不执行就行啦  🤔不用考虑那么复杂的
+  // 不对f()最后return function作为参数 效果一样的  来实验下
+  /*
+  
+      // 从右到左传入参数
+      // 登陆
+      function login(user) {
+        console.log("login " + user);
+      }
+      // 注册
+      function resgister(user) {
+        console.log("resgister " + user);
+      }
+      // 抽离出来的中间函数
+      function wrapUser(Wrapfunc) {
+        let Newfunc = () => {
+         // let user = localStorage.getItem("user");
+         let user ="vnues"
+          Wrapfunc(user);
+        };
+        return Newfunc;
+      }
+      // 调用
+     // debugger 最后的结果满足不了
+      login =  _.compose(wrapUser,login)
+      resgister = _.compose(wrapUser,resgister)
+      login();
+      resgister();
+
+  */
+  /* 
+    // 所以说underscore的compose还是只适合f(g(h()))这种方式 执行后的函数结果当做参数继续传入
+    // 调用形式 e(g(f(h))) 
+    function compose(...args) {
+      var arity = args.length - 1;
+      var tag = false;
+      if (typeof args[arity] === "function") {
+        tag = true;
+      }
+      if (arity > 1) {
+        var param = args.pop(args[arity]); // 先去除第一个函数A
+        arity--;
+        var newParam = args[arity].call(args[arity], param); // 执行完
+        args.pop(args[arity]);// 拿出来
+        args.push(newParam); // 把返回的结果push进去
+        return compose(...args);
+      } else if (arity === 1) {
+        if (!tag) {
+          return args[0].bind(null, args[1]);
+        } else {
+          return args[0].call(null, args[1]);
+        }
+      }
+    }
+    // 从右到左传入参数
+    // 登陆
+    function login(user, age) {
+      console.log("login " + user, age);
+    }
+    // 注册
+    function resgister(user) {
+      console.log("resgister " + user);
+    }
+    // 抽离出来的中间函数
+    function wrapUser(Wrapfunc) {
+      let Newfunc = (age) => {
+        // let user = localStorage.getItem("user");
+        let user = "vnues";
+        Wrapfunc(user, age);
+      };
+      return Newfunc;
+    }
+    function wrapConsole(func) {
+      let Newfunc = () => {
+        // let user = localStorage.getItem("user");
+        let age = 22
+        func(age);
+      };
+      return Newfunc;
+    }
+    // 调用
+    // debugger 最后的结果满足不了
+    debugger
+    login = compose(
+      wrapConsole,
+      wrapUser,
+      login
+    );
+  
+    login();
+    //  resgister();
+    */
   _.compose = function () {
     var args = arguments;
     var start = args.length - 1;
@@ -1276,7 +1377,7 @@
       var i = start;
       var result = args[start].apply(this, arguments);
       while (i--) result = args[i].call(this, result);
-      return result;
+      return result; // 不return一个function而是所有传入的函数都会执行？
     };
   };
 
