@@ -248,3 +248,33 @@ CommonJS就按耐不住了，CommonJS API定义很多普通应用程序（主要
 
 
 webpack没有babel工具也编译不了es6
+
+
+
+
+但突然有个不懂的了前端页面怎么打印出来process对象的
+
+还有注意SourceMap
+
+还有你要实现某个方法或者某个操作或者支持 不是引入库等支持吗  那么webpack帮我们支持也是这样的  可能就是引入webpack...xx.js文件 这样
+
+所以我怀疑process是webpack带来的
+
+
+现在的前端工程使用 webpack 多是用来构建单页应用，入口脚本文件会以一个树形的结构引用着项目其它脚本文件。
+而 webpack 处理的这个入口脚本文件及其引用的脚本文件都无法访问为 webpack.dev.config.js 脚本提供的 process.env.NODE_ENV 属性，
+但是可以通过 webpack 的插件来让这些脚本文件都能访问到 process.env.NODE_ENV：
+https://juejin.im/post/5a4ed5306fb9a01cbc6e2ee2
+```javascript
+
+const webpack = require('webpack');
+module.exports = {
+  plugins: [
+    new webpack.DefinePlugin({
+      'process.env.NODE_ENV': '"development"'
+    })
+  ]
+}
+
+```
+这一切就是webpack搞的鬼 那么究竟是需要引入啥文件才能拿到的 慢慢琢磨
