@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+</head>
+<body>
+  <div id="app">
+    <p>{{ foo }}</p>
+    <!-- 这里的 `foo` 不会更新！ -->
+    <button v-on:click="foo = 'baz'">Change it</button>
+  </div>
+</body>
+<script src="./vue.js"></script>
+<!-- 这个{{}}语法怎么渲染上去的 Vnode重新操作吗 这样就讲通了 -->
+<script>
+
+// 如果我想把这个当做组件怎么操作
+var obj = {
+  foo: 'bar'
+}
+
+new Vue({
+  el: '#app',
+  // 这样写也行
+  data(){
+    return obj
+  }
+})
+</script>
+</html>
+
+
+
