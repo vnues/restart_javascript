@@ -2113,7 +2113,7 @@
         return target[key]
       }
     };
-  
+
     initProxy = function initProxy(vm) {
       if (hasProxy) {
         // determine which proxy handler to use
@@ -3358,6 +3358,7 @@
     normalizationType,
     alwaysNormalize
   ) {
+
     if (Array.isArray(data) || isPrimitive(data)) {
       normalizationType = children;
       children = data;
@@ -4962,8 +4963,10 @@
 
   function initMixin(Vue) {
     Vue.prototype._init = function (options) {
+      debugger
       var vm = this;
       // a uid
+      // 定义了vm唯一标识_uid属性，每次new Vue都会递增。
       vm._uid = uid$3++;
 
       var startTag, endTag;
@@ -5010,8 +5013,7 @@
         mark(endTag);
         measure(("vue " + (vm._name) + " init"), startTag, endTag);
       }
-      console.log(vm.$options)
-      console.log(vm.$options.el)
+
       if (vm.$options.el) {
         vm.$mount(vm.$options.el);
       }
@@ -5079,6 +5081,7 @@
     ) {
       warn('Vue is a constructor and should be called with the `new` keyword');
     }
+
     this._init(options);
   }
 

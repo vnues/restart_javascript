@@ -1,6 +1,9 @@
 <template>
   <div class="hello-world">
-    {{ this.message }}
+    <div>
+      <span> {{ this.message }}</span>
+      <span> {{ this.message }}</span>
+    </div>
   </div>
 </template>
 

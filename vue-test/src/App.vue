@@ -1,6 +1,10 @@
 <template>
   <div id="app">
     <div>{{ this.message }}</div>
+    <div class="app-message">
+      <span> {{ message }}</span>
+      <span> {{ message }}</span>
+    </div>
     <HelloWorld />
   </div>
 </template>

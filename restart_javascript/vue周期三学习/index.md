@@ -433,3 +433,241 @@ dom ---> render  那么到底对这个render做了什么
 
 
 isPrimitive方法判断是否为基础类型
+
+
+
+❗️❗️❗️注意认清楚什么是文本节点
+
+```javascript
+   
+   render(createElement) {
+    // 这样写直接替换到app1整个
+    return createElement('div',{
+        attrs:{
+          id:'app'
+        }
+    },['1231231',createElement('div',["hello review vue h1",createElement('h3',"hello review vue h3")]),createElement('h2',"hello review vue h2")])
+  }
+
+```
+
+### render函数的三个参数
+
+/**
+    * createElement 本身也是一个函数，它有三个参数
+    * 返回值: VNode，即虚拟节点
+    * 1. 一个 HTML 标签字符串，组件选项对象，或者解析上述任何一种的一个 async 异步函数。必需参数。{String | Object | Function} - 就是你要渲染的最外层标签
+    * 2. 一个包含模板相关属性的数据对象你可以在 template 中使用这些特性。可选参数。{Object} - 1中的标签的属性
+    * 3. 子虚拟节点 (VNodes)，由 `createElement()` 构建而成，也可以使用字符串来生成“文本虚拟节点”。可选参数。{String | Array} - 1的子节点，可以用 createElement() 创建，文本节点直接写就可以
+    */
+————————————————
+版权声明：本文为CSDN博主「__Amy」的原创文章，遵循 CC 4.0 BY-SA 版权协议，转载请附上原文出处链接及本声明。
+原文链接：https://blog.csdn.net/sansan_7957/article/details/83014838
+
+突然想到为什么要扁平处理数组？？？？？
+
+
+https://juejin.im/post/59b53a595188257e7406fe3d
+
+目前来说， _createElement 比较重要的点是normalizeChildren(children) 和 simpleNormalizeChildren(children)方法。
+
+simpleNormalizeChildren把二维数组拍平。([1,2,[3,4],5])
+
+
+
+
+
+为什么需要拍平 使用v-for的情况
+
+
+simpleNormalizeChildren 方法调用场景是 render 函数是编译生成的。理论上编译生成的 children 都已经是 VNode 类型的，但这里有一个例外，就是 functional component 函数式组件返回的是一个数组而不是一个根节点，所以会通过 Array.prototype.concat 方法把整个 children 数组打平，让它的深度只有一层。
+
+normalizeChildren 方法的调用场景有 2 种，一个场景是 render 函数是用户手写的，当 children 只有一个节点的时候，Vue.js 从接口层面允许用户把 children 写成基础类型用来创建单个简单的文本节点，这种情况会调用 createTextVNode 创建一个文本节点的 VNode；另一个场景是当编译 slot、v-for 的时候会产生嵌套数组的情况，会调用 normalizeArrayChildren 方法，接下来看一下它的实现：
+
+### vue的函数式组件
+
+然后再对应的节点遍历其children 会发现是个数组当然得打平来
+
+理论上编译生成的 children 都已经是 VNode 类型的，但这里有一个例外，就是 functional component 函数式组件返回的是一个数组而不是一个根节点，所以会通过 Array.prototype.concat 方法把整个 children 数组打平
+
+只在一层做打平 为什么是这样 因为
+because functional components already normalize their own children.
+
+
+
+那么问题来了
+
+
+vue的函数式组件怎么写
+
+export default {
+    name: 'functional-button',
+    functional: true,
+    render(createElement, context) {
+        return createElement('button', 'click me')
+    }
+}
+
+
+
+https://blog.csdn.net/xuchaobei123/article/details/75195522
+
+
+
+在 2.5.0 及以上版本中，如果你使用了单文件组件，那么基于模板的函数式组件可以这样声明：
+
+<template functional>
+  <div class="cell">
+    <div v-if="props.value" class="on"></div>
+    <section v-else class="off"></section>
+  </div>
+</template>
+
+<script>
+export default {
+  props: ['value']
+}
+</script>
+
+我们标记组件为 functional，这意味它是无状态 (没有响应式数据)，无实例 (没有 this 上下文)。
+
+提示：函数式组件比普通组件性能更好，缺点是定义的数据没有响应式。
+————————————————
+版权声明：本文为CSDN博主「前端精髓」的原创文章，遵循 CC 4.0 BY-SA 版权协议，转载请附上原文出处链接及本声明。
+原文链接：https://blog.csdn.net/wu_xianqiang/article/details/88891701
+
+
+
+首先vnode和oldVnode都是之前定义好的，所以并不成立 if (isUndef(vnode)) {}
+
+因为isRealElement为true，所以进入if (isRealElement) {}，进而 if (oldVnode.nodeType === 1 && oldVnode.hasAttribute(SSR_ATTR)) {}也不成立，因为hydrating 为false，所以 if (isTrue(hydrating)) {} 为false。之后执行到oldVnode = emptyNodeAt(oldNode)
+在emptyNodeat中执行的实际上是将把真实的dom转化为vnode
+
+
+
+Virtual DOM 除了它的数据结构的定义，映射到真实的 DOM 实际上要经历 VNode 的 create、diff、patch 等过程。那么在 Vue.js 中，VNode 的 create 是通过之前提到的 createElement 方法创建的，我们接下来分析这部分的实现。
+
+diff算法是在createElement阶段
+
+--->就是render阶段
+
+
+
+怎么做到数据驱动
+
+
+
+当你看一个项目代码的时候，最好是能找到一条主线，先把大体流程结构摸清楚，再深入到细节，逐项击破，拿Vue举个栗子：假如你已经知道Vue中数据状态改变后会采用virtual DOM的方式更新DOM，这个时候，如果你不了解virtual DOM，那么听我一句“暂且不要去研究内部具体实现，因为这会是你丧失主线”，而你仅仅需要知道virtual DOM分为三个步骤：
+
+一、createElement(): 用 JavaScript对象(虚拟树) 描述 真实DOM对象(真实树)
+二、diff(oldNode, newNode) : 对比新旧两个虚拟树的区别，收集差异
+三、patch() : 将差异应用到真实DOM树
+
+重点啊❗️❗️❗️
+
+
+├── build --------------------------------- 构建相关的文件，一般情况下我们不需要动
+├── dist ---------------------------------- 构建后文件的输出目录
+├── examples ------------------------------ 存放一些使用Vue开发的应用案例
+├── flow ---------------------------------- 类型声明，使用开源项目 [Flow](https://flowtype.org/)
+├── package.json -------------------------- 不解释
+├── test ---------------------------------- 包含所有测试文件
+├── src ----------------------------------- 这个是我们最应该关注的目录，包含了源码
+│   ├── entries --------------------------- 包含了不同的构建或包的入口文件
+│   │   ├── web-runtime.js ---------------- 运行时构建的入口，输出 dist/vue.common.js 文件，不包含模板(template)到render函数的编译器，所以不支持 `template` 选项，我们使用vue默认导出的就是这个运行时的版本。大家使用的时候要注意
+│   │   ├── web-runtime-with-compiler.js -- 独立构建版本的入口，输出 dist/vue.js，它包含模板(template)到render函数的编译器
+│   │   ├── web-compiler.js --------------- vue-template-compiler 包的入口文件
+│   │   ├── web-server-renderer.js -------- vue-server-renderer 包的入口文件
+│   ├── compiler -------------------------- 编译器代码的存放目录，将 template 编译为 render 函数
+│   │   ├── parser ------------------------ 存放将模板字符串转换成元素抽象语法树的代码
+│   │   ├── codegen ----------------------- 存放从抽象语法树(AST)生成render函数的代码
+│   │   ├── optimizer.js ------------------ 分析静态树，优化vdom渲染
+│   ├── core ------------------------------ 存放通用的，平台无关的代码
+│   │   ├── observer ---------------------- 反应系统，包含数据观测的核心代码
+│   │   ├── vdom -------------------------- 包含虚拟DOM创建(creation)和打补丁(patching)的代码
+│   │   ├── instance ---------------------- 包含Vue构造函数设计相关的代码
+│   │   ├── global-api -------------------- 包含给Vue构造函数挂载全局方法(静态方法)或属性的代码
+│   │   ├── components -------------------- 包含抽象出来的通用组件
+│   ├── server ---------------------------- 包含服务端渲染(server-side rendering)的相关代码
+│   ├── platforms ------------------------- 包含平台特有的相关代码
+│   ├── sfc ------------------------------- 包含单文件组件(.vue文件)的解析逻辑，用于vue-template-compiler包
+│   ├── shared ---------------------------- 包含整个代码库通用的代码
+
+
+
+
+// initMixin(Vue)    src/core/instance/init.js **************************************************
+Vue.prototype._init = function (options?: Object) {}
+
+// stateMixin(Vue)    src/core/instance/state.js **************************************************
+Vue.prototype.$data
+Vue.prototype.$set = set
+Vue.prototype.$delete = del
+Vue.prototype.$watch = function(){}
+
+// renderMixin(Vue)    src/core/instance/render.js **************************************************
+Vue.prototype.$nextTick = function (fn: Function) {}
+Vue.prototype._render = function (): VNode {}
+Vue.prototype._s = _toString
+Vue.prototype._v = createTextVNode
+Vue.prototype._n = toNumber
+Vue.prototype._e = createEmptyVNode
+Vue.prototype._q = looseEqual
+Vue.prototype._i = looseIndexOf
+Vue.prototype._m = function(){}
+Vue.prototype._o = function(){}
+Vue.prototype._f = function resolveFilter (id) {}
+Vue.prototype._l = function(){}
+Vue.prototype._t = function(){}
+Vue.prototype._b = function(){}
+Vue.prototype._k = function(){}
+
+// eventsMixin(Vue)    src/core/instance/events.js **************************************************
+Vue.prototype.$on = function (event: string, fn: Function): Component {}
+Vue.prototype.$once = function (event: string, fn: Function): Component {}
+Vue.prototype.$off = function (event?: string, fn?: Function): Component {}
+Vue.prototype.$emit = function (event: string): Component {}
+
+// lifecycleMixin(Vue)    src/core/instance/lifecycle.js **************************************************
+Vue.prototype._mount = function(){}
+Vue.prototype._update = function (vnode: VNode, hydrating?: boolean) {}
+Vue.prototype._updateFromParent = function(){}
+Vue.prototype.$forceUpdate = function () {}
+Vue.prototype.$destroy = function () {}
+
+
+
+为什么review vue源码  就跟我之前review underscore的目标一样  review underscore的目标是为了了解函数式编程的实现
+
+
+那么review vue的目标就是为了了解mvvm框架的实现
+
+
+然后，调用了四个 init* 方法分别为：initLifecycle、initEvents、initState、initRender，且在 initState 前后分别回调了生命周期钩子 beforeCreate 和 created，而 initRender 是在 created 钩子执行之后执行的，看到这里，也就明白了为什么 created 的时候不能操作DOM了。因为这个时候还没有渲染真正的DOM元素到文档中。created 仅仅代表数据状态的初始化完成
+
+
+ Object.defineProperty(target, key, sharedPropertyDefinition)
+
+ 为什么data里面的数据,可以用this.message表示
+
+   function proxy(target, sourceKey, key) {
+    sharedPropertyDefinition.get = function proxyGetter() {
+      return this[sourceKey][key]
+    };
+    sharedPropertyDefinition.set = function proxySetter(val) {
+      this[sourceKey][key] = val;
+    };
+    Object.defineProperty(target, key, sharedPropertyDefinition);
+  }
+
+ 因为这样vue源码是这样处理的
+
+  Object.defineProperty(target, key, sharedPropertyDefinition)
+  
+  Object.defineProperty() 方法会直接在一个对象上定义一个新属性，或者修改一个对象的现有属性， 并返回这个对象。
+  
+  vue在这一步做了proxy handle处理
+
+
+  ### 给我自己写个mvvm框架怎么写？
+  
