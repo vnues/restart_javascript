@@ -902,8 +902,278 @@ Vue的操作就是把组件也当做特殊vm实例化对象  对象有对应的�
 这个设计很同步啊同级啊感觉🤔
 
 
-❗️面试问你如何看待Vue组件：我会这样答 实际上Vue组件就是个特殊的vm对象 vm所要做的流程 组件也会跟着走一遍
+❗️面试问你如何看待Vue组件：我会这样答 实际上Vue组件就是个特殊的vm对象 vm所要做的流程 组件也会跟着走一遍 ---你把传进去的是标签跟传进去是组件想成同级就行了
+
+```javascript
+    
+    new Vue({
+    el: '#app',
+    data: {
+
+      text: '学习 Vue',
+    },
+  })
+
+```
+当我们一开始传入的是标签的时候new出一个vm实例时候 就会启动一大部分流程 然后假设这个实例上还有子组件  子组件走的流程跟这个标签父元素走的流程一样❗️❗️
 
 构造器用来实例化对象
 
 所以当我们来写组件时候 自己应该要开始意识到自己写的是Vue组件构造函数的部分（底层源码还会帮你extend一下）
+
+
+`由于组件初始化的时候是不传 el 的，因此组件是自己接管了 $mount 的过程，这个过程的主要流程在上一章介绍过了，回到组件 init 的过程，componentVNodeHooks 的 init 钩子函数，在完成实例化的 _init 后，接着会执行 child.$mount(hydrating ? vnode.elm : undefined, hydrating) 。这里 hydrating 为 true 一般是服务端渲染的情况，我们只考虑客户端渲染，所以这里 $mount 相当于执行 child.$mount(undefined, false)，它最终会调用 mountComponent 方法，进而执行 vm._render() 方法`
+
+
+### 总结
+
+
+
+那么到此，一个组件的 VNode 是如何创建、初始化、渲染的过程也就介绍完毕了。在对组件化的实现有一个大概了解后，接下来我们来介绍一下这其中的一些细节。`我们知道编写一个组件实际上是编写一个 JavaScript 对象，对象的描述就是各种配置`，之前我们提到在 _init 的最初阶段执行的就是 merge options 的逻辑，那么下一节我们从源码角度来分析合并配置的过程。
+
+
+你把传进去的是标签跟传进去是组件想成同级就行了
+
+
+```javascript
+  
+     const Sub = function VueComponent(options) {
+      this._init(options)
+    }
+
+```
+⚠️不是组件化会重新走一遍init的流程 而是这个组件的构造器有init的方法 我们其实都可以new 组件构造器 所走的流程跟new Vue一样的 ❗️应该要这样理解
+
+再继续理解 感觉也不是这样的
+
+所以子组件的实例化实际上就是在这个时机执行的，并且它会执行实例的 _init 方法，这个过程有一些和之前不同的地方需要挑出来说，代码在 src/core/instance/init.js 中
+子组件会执行一次Init 还有注意单页（应用就是一张页面吗可以这样理解 原理一样）或者一张页面只有☝vm实例 这点可以保证  ❗️❗️❗️这个理解很重要
+
+通过oop思想封装框架有点独特 不像是面向执行过程的 实际也就是执行方法  只不过多封装一层而已
+
+
+
+现在应该研究怎么去实例化组件构造器
+
+
+
+我们只保留关键部分的代码，这里的 _parentVnode 就是当前组件的父 VNode，而 render 函数生成的 vnode 当前组件的渲染 vnode，vnode 的 parent 指向了 _parentVnode，也就是 vm.$vnode，它们是一种父子的关系
+
+
+我们知道在执行完 vm._render 生成 VNode 后，接下来就要执行 vm._update 去渲染 VNode 了。来看一下组件渲染的过程中有哪些需要注意的，vm._update 的定义在 
+
+
+
+
+所以子组件还是会走init--->mount
+
+<<----再回去vm渲染吗>>
+
+在完成组件的整个 patch 过程后，最后执行 insert(parentElm, vnode.elm, refElm) 完成组件的 DOM 插入，如果组件 patch 过程中又创建了子组件，那么DOM 的插入顺序是先子后父
+
+
+注意子组件的实例-init是发生在vm过程的patch阶段？？？？？
+
+
+
+组件里面还是套有组件怎么办
+
+
+还有vue怎么检查标签的合法性 是不是存在或者闭合了没❗️
+
+
+vue-loader事先编译好了render函数 但是我们这里之所以有render那是因为`有配置了render函数`这个属性
+
+```javascript
+
+new Vue({
+  render: h => h(App),
+}).$mount('#app')
+// 执行完new Vue里面的操作以后出来再来执行$mount('#app')
+// 此时相当于vm.$mount('#app')===>$mount函数里的this指向vm
+```
+
+```javascript
+
+ else {
+      // 是这一步把render函数放到$options属性里面吗
+      vm.$options = mergeOptions(
+        resolveConstructorOptions(vm.constructor),
+        options || {},
+        vm
+      )
+  }
+  // 的确如此
+```
+
+原先原型上的 $mount 方法在 src/platform/web/runtime/index.js 中定义，之所以这么设计完全是为了复用，因为它是可以被 runtime only 版本的 Vue 直接使用的。
+
+
+实际上Vue实例挂载也是方法函数去操作dom覆盖或者生成 你可以这样抽出来简单的认为
+
+
+  return mount.call(this, el, hydrating)是什么东西？？？？
+
+
+  递归调用吗  
+
+
+  由于构建的不同，如果我们采用webpack这种构建vue项目，webpack会提前将.vue文件预编译为带render函数的js文件，就将省去compile这个过程，但是为了利于我们分析vue的整个过程，我们采用带compile版本的构建，还原浏览器渲染的整个过程。如上图说的它的vue的初始化大概是这样的：
+
+
+  https://zhuanlan.zhihu.com/p/48954878
+
+
+
+  #### vue组件化原来是这样子
+
+  ```javascript
+
+  <template>
+      <div id="app">
+          <span>{{message}}</span>
+          <Test/>
+      </div>
+  </template>
+
+  ```
+
+  如例子🌰中的 我们经过_render函数会转化渲染成Vnode 对应的有组件Vnode其实就是个占位符
+  等到update中的patch过程重新new 组件构造器()重新走_init方法 过程的是这样的
+
+  那为什么要这样子做嘞 回到一开始这种 我们假设一开始就传入组件标签  那么new Vue肯定这样操作
+
+  ```javascript
+        new Vue({
+        render: h => h(App),
+      }).$mount('#app')
+  ```
+  我们传入的是个组件App #app是它父级  其它子组件的渲染过程肯定跟APP的渲染过程
+
+  这期间可能没有el属性 我们置为undefined就行
+
+
+  还有根元素是不做进去Vnode比较的 Vnode是根元素下的子元素
+
+  为什么init 因为实例化对象了
+
+
+
+  ❗️❗️❗️
+  注意，这里我们传入的 vnode 是组件渲染的 vnode，也就是我们之前说的 vm._vnode，如果组件的根节点是个普通元素，那么 vm._vnode 也是普通的 vnode，这里 createComponent(vnode, insertedVnodeQueue, parentElm, refElm) 的返回值是 false。接下来的过程就和我们上一章一样了，先创建一个父节点占位符，然后再遍历所有子 VNode 递归调用 createElm，在遍历的过程中，如果遇到子 VNode 是一个组件的 VNode，则重复本节开始的过程，这样通过一个递归的方式就可以完整地构建了整个组件树。
+
+  Vnode是一个节点而不是一个Vnode Tree所以得注意了  但是想想节点包括很多子节点啊 
+
+  所有想到傻逼的解释或者幼稚化的 就是知识点不足
+  
+  这也注定了 我们在update过程中需要去遍历每个Vnode  具体怎么去遍历Vnode 找找vue源码怎么写的吧❗️❗️❗️
+
+
+  vue好像是对一个一个Vnode去循环的  如果子节点再存在组价Vnode还是进去再次循环
+
+  那么HTML标签节点呢
+
+
+
+  所以我觉得分析Vnode各个节点的遍历应该是在patch过程  就在这个过程上看 ❗️❗️❗️
+
+
+  render里面怎么给每个组件生成构造函数的 肯定也是遍历的
+
+  我就想看看是怎么遍历的
+
+  render-->vnode-->patch
+
+
+  还真的是先子后父❗️❗️❗️
+
+
+
+  App组件 --> patch 走组件逻辑 经过init-->render
+
+  我们来分析这个Vnode树是怎么经过patch(如何遍历的)
+
+  分析树之前 来看我们写的模板结构是怎么样的 
+  先是大的App组件为一个大的应用 里面包裹住其它(这也是为啥叫单应用 因为本身只有一个app包裹 但是可以存在多个app 多页面就是)
+
+
+  所以Vue这种mvvm框架就是这种限定  只有一个闭合标签 或者一个App 包裹住
+
+  所以一开始我们在render函数传入的是App组件
+
+  结构是这样的
+
+  ```javascript
+    
+  <div id="app">
+    <span>{{ message }}</span>
+    <Test />
+  </div>
+
+  ```
+也就是没有跟App同级的组件  New Vue也只会发生一次 app也只有一个  这些也得重新认识清楚
+
+也就是我以前会认为有多个new Vue操作  甚至觉得还有多个app类似组件
+
+你要认清楚什么是单页应用
+
+
+来清楚认识这个ap结构 一个大APP-->....--->...这样的结构
+
+
+### 如何遍历Vnode
+
+首先从render来看 如何遍历生成Vnode   如果tag是组件就生成占位符
+
+
+再来看update---> update过程中我们已经拿到Vnode树(虚拟dom)然后已经可以遍历了,具体子Vnode生成真实的dom是走这个流程
+`Vue处理组件的时候render那里先生成一个组件占位符 等到update的时候 执行一遍new 构造子类构造函数()-->init -->render-->update`
+`同样的 如果组件里面还是存在组件 也是在render时候生成占位符`❗️❗️❗️  子Vnode生成完真实的dom再return回去最大的update函数 轮到父级生成真实的dom 先子后父
+
+```javascript
+  
+    function createChildren (vnode, children, insertedVnodeQueue) {
+    if (Array.isArray(children)) {
+      if (process.env.NODE_ENV !== 'production') {
+        checkDuplicateKeys(children)
+      }
+      for (let i = 0; i < children.length; ++i) {
+        createElm(children[i], insertedVnodeQueue, vnode.elm, null, true, children, i)
+      }
+    } else if (isPrimitive(vnode.text)) {
+      nodeOps.appendChild(vnode.elm, nodeOps.createTextNode(String(vnode.text)))
+    }
+  }
+
+```
+
+那么来看看render函数如何循环遍历拿到Vnode的
+
+
+这里它是创建一个大的Vnode节点
+
+    vnode = new VNode(
+      tag, data, children,
+      undefined, undefined, context
+    )
+
+怎么确定传入的children children过后传入的？？
+
+```javascript
+
+// is needed to cater to all possible types of children values.
+export function normalizeChildren (children: any): ?Array<VNode> {
+  return isPrimitive(children)
+    ? [createTextVNode(children)]
+    : Array.isArray(children)
+      ? normalizeArrayChildren(children)
+      : undefined
+}
+
+```
+
+children是经过这步递归处理
+
+
+我们写的template语法 包括jsx会被编译成js对象---->然后这个js对象编译肯定是跟dom有层次关系  这样也就映射成Vnode是这样的❗️❗️❗️
+

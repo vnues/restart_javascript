@@ -1,20 +1,16 @@
 <template>
-  <div id="app">
+  <div id="new">
     <span>{{ message }}</span>
     <Test />
   </div>
 </template>
 
 <script>
-import Test from "./components/Test.vue";
 export default {
-  name: "app",
-  components: {
-    Test
-  },
+  name: "new",
   data() {
     return {
-      message: "hello world❗️❗️❗️"
+      message: "new Vue vvvvvvv ❗️❗️❗️"
     };
   }
 };
