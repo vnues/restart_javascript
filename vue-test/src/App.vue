@@ -16,6 +16,15 @@ export default {
     return {
       message: "hello world❗️❗️❗️"
     };
+  },
+  created() {
+    console.log("created父组件App被执行了");
+  },
+  created() {
+    console.log("created父组件App被执行了12312312312");
+  },
+  mounted() {
+    console.log("mounted父组件App被执行了");
   }
 };
 </script>
