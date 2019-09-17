@@ -1177,3 +1177,766 @@ children是经过这步递归处理
 
 我们写的template语法 包括jsx会被编译成js对象---->然后这个js对象编译肯定是跟dom有层次关系  这样也就映射成Vnode是这样的❗️❗️❗️
 
+
+
+### mounted过程中怎么先子后父 --- destroy这个过程也是     每个过程都有对应的hook函数
+
+render函数执行中 怎么生成组件占位符的
+
+
+首先我们需要知道，在创建 VNode 节点对应的 DOM 节点后，会先递归创建子虚拟节点的子 DOM 节点，之后再将该 DOM 节点插入到父元素上
+
+
+哎呀基础不扎实  一个节点要渲染出来    我们还是应该想到  节点的创建还要有对应的插入❗️❗️❗️
+
+如果在一个知识点老是出现不扎实情况 有必要回去系统再刷一下 但是如果只是单纯一个 那就是没有注意到  当做新知识点学习就行  不必太在意 以为三年级的被除数？？
+
+> 首先我们需要知道，在创建 VNode 节点对应的 DOM 节点后，会先递归创建子虚拟节点的子 DOM 节点，之后再将该 DOM 节点插入到父元素上，因此：在由 VNode Tree 转化为 DOM Tree 的过程中，DOM 节点的创建是自上而下的，即先创建父 DOM 节点，再创建子 DOM 节点，最后创建孙 DOM 节点；但是将` DOM 节点插入到父 DOM 节点的过程是自下而上的，即孙 DOM 节点先插入到子 DOM 节点之下，子 DOM 节点再插入到父 DOM 节点之下` 什么是先子后父  这个概念针对于哪个过程
+
+注意，这里我们传入的 vnode 是组件渲染的 vnode，也就是我们之前说的 vm._vnode，如果组件的根节点是个普通元素，那么 vm._vnode 也是普通的 vnode，这里 createComponent(vnode, insertedVnodeQueue, parentElm, refElm) 的返回值是 false。接下来的过程就和我们上一章一样了，先创建一个父节点占位符，然后再遍历所有子 VNode 递归调用 createElm，在遍历的过程中，如果遇到子 VNode 是一个组件的 VNode，则重复本节开始的过程，这样通过一个递归的方式就可以完整地构建了整个组件树。
+
+
+每个 Vue 实例在被创建之前都要经过一系列的初始化过程。例如需要设置`数据监听、编译模板、挂载实例到 DOM`、在`数据变化时更新 DOM` 等。同时在这个过程中也会运行一些叫做生命周期钩子的函数，给予用户机会在一些特定的场景下添加他们自己的代码。
+
+
+
+
+review vue源代码 我了解到了Vue实例是什么 new Vue到底发生了什么  ---> 编译模板、挂载实例到 DOM
+
+也明白了render update
+
+等下再debugger
+
+
+在我们实际项目开发过程中，会非常频繁地和 Vue 组件的生命周期打交道，接下来我们就从源码的角度来看一下这些生命周期的钩子函数是如何被执行的。
+
+mvvm框架 底层帮我们创建dom 当然有对应的周期阶段
+
+在上一节中，我们详细地介绍了 Vue.js 合并 options 的过程，各个阶段的生命周期的函数也被合并到 vm.$options 里，并且是一个数组。因此 callhook 函数的功能就是调用某个生命周期钩子注册的所有回调函数。
+
+
+
+相当于这样子  内部实际定义了（定死了）生命周期函数的名字，不是定死 而是调用定死  它调用了我们写的created函数 实际callHook是这样调用的
+
+也就是我们在export default{
+  ...
+}
+对象内写的函数 （对象里面的函数属性 我们之前说过 类似于外部的函数声明） 所以实际上我们按照官方给出的名字去定义函数  然后给Vue底层源码调用 设计是这样设计的
+
+
+```javascript
+
+  export function callHook (vm: Component, hook: string) {
+  // #7573 disable dep collection when invoking lifecycle hooks
+  pushTarget()
+  const handlers = vm.$options[hook]
+  if (handlers) {
+    for (let i = 0, j = handlers.length; i < j; i++) {
+      try {
+        handlers[i].call(vm)
+      } catch (e) {
+        handleError(e, vm, `${hook} hook`)
+      }
+    }
+  }
+  if (vm._hasHookEvent) {
+    vm.$emit('hook:' + hook)
+  }
+  popTarget()
+}
+
+```
+
+
+我们可以看到，每个子组件都是在这个钩子函数中执行 mounted 钩子函数，并且我们之前分析过，insertedVnodeQueue 的添加顺序是先子后父，所以对于同步渲染的子组件而言，mounted 钩子函数的执行顺序也是先子后父
+
+
+这一节主要介绍了 Vue 生命周期中各个钩子函数的执行时机以及顺序，通过分析，我们知道了如在 created 钩子函数中可以访问到数据，在 mounted 钩子函数中可以访问到 DOM，在 destroy 钩子函数中可以做一些定时器销毁工作，了解它们有利于我们在合适的生命周期去做不同的事情
+
+
+对象本身还充当对变量不对外污染的功能
+
+callHook的作用就是执行用户自定义的钩子函数，并将钩子中this指向指为当前组件实例。
+
+callHook 函数的逻辑很简单，根据传入的字符串 `hook`，去拿到 vm.$options[hook] `对应的回调函数数组`，然后遍历执行，执行的时候把 vm 作为函数执行的上下文
+
+
+突然想到一个问题 就是为什么handlers是一个数组  不是一个回调函数吗  好拓展吗❗️❗️
+
+
+
+注意了vue的内置三个全局组件
+
+```javascript
+ 
+ 在 Vue.js 中，除了它内置的组件如 keep-alive、transition、transition-group
+
+```
+
+
+组件注册实际就是为了拿到构造函数  --- 这个构造函数已经包含了我们组件所需要的信息 不需要我们再传入（options）
+
+其实理解了全局注册的过程，局部注册是非常简单的。在组件的 Vue 的实例化阶段有一个合并 option 的逻辑，之前我们也分析过，所以就把 components 合并到 vm.$options.components 上，这样我们就可以在 resolveAsset 的时候拿到这个组件的构造函数，并作为 createComponent 的钩子的参数。
+
+
+
+##### 全局注册
+
+
+```javascript
+import Vue from 'vue'
+import App from './App.vue'
+
+Vue.config.productionTip = false
+// ... 全局注册代码
+// 注意这些Vue配置调用api是发生new Vue操作前❗️❗️
+
+new Vue({
+  render: h => h(App),
+}).$mount('#app')
+
+```
+
+也就是说它会把 Vue.options 合并到 Sub.options，也就是组件的 options 上， 然后在组件的实例化阶段，会执行 merge options 逻辑，把 Sub.options.components 合并到 vm.$options.components 上
+
+
+
+在 new Vue() 之后。 Vue 会调用 _init 函数进行初始化，也就是这里的 init 过程，它会初始化生命周
+期、事件、 props、 methods、 data、 computed 与 watch 等。其中最重要的是通过
+Object.defineProperty 设置 setter 与 getter 函数，用来实现「 响应式」以及「 依赖收集」，后面会详
+细讲到，这里只要有一个印象即可。
+
+
+其实前端开发最重要的 2 个工作，一个是把数据渲染到页面，另一个是处理用户交互。Vue 把数据渲染到页面的能力我们已经通过源码分析出其中的原理了，但是由于一些用户交互或者是其它方面导致数据发生变化重新对页面渲染的原理我们还未分析。
+
+在分析前，我们先直观的想一下，如果不用 Vue 的话，我们会通过最简单的方法实现这个需求：监听点击事件，修改数据，手动操作 DOM 重新渲染。这个过程和使用 Vue 的最大区别就是多了一步“手动操作 DOM 重新渲染”。这一步看上去并不多，但它背后又潜在的几个要处理的问题：
+
+
+可能很多小伙伴之前都了解过 Vue.js 实现响应式的核心是利用了 ES5 的 Object.defineProperty，这也是为什么 Vue.js 不能兼容 IE8 及以下浏览器的原因，我们先来对它有个直观的认识。
+
+Object.defineProperty给这个对象添加属性
+
+Object.defineProperty `方法会直接在一个对象上定义一个新属性，或者修改一个对象的现有属性， 并返回这个对象`，先来看一下它的语法：
+
+
+有没有思考🤔过props传递过来的值可以直接用this.xxx访问得到
+
+首先介绍一下代理，代理的作用是把 props 和 data 上的属性代理到 vm 实例上，这也就是为什么比如我们定义了如下 props，却可以通过 vm 实例访问到它。
+
+
+proxy 方法的实现很简单，通过 Object.defineProperty 把 target[sourceKey][key] 的读写变成了对 target[key] 的读写。所以对于 props 而言，对 vm._props.xxx 的读写变成了 vm.xxx 的读写，而对于 vm._props.xxx 我们可以访问到定义在 props 中的属性，所以我们就可以通过 vm.xxx 访问到定义在 props 中的 xxx 属性了。同理，对于 data 而言，对 vm._data.xxxx 的读写变成了对 vm.xxxx 的读写，而对于 vm._data.xxxx 我们可以访问到定义在 data 函数返回对象中的属性，所以我们就可以通过 vm.xxxx 访问到定义在 data 函数返回对象中的 xxxx 属性了。
+
+```javascript
+
+```
+
+
+思考🤔：我可以理解成通过Object.defineProperty给vm这个对象增加属性
+
+```javascript
+
+  const sharedPropertyDefinition = {
+  enumerable: true,
+  configurable: true,
+  get: noop,
+  set: noop
+}
+
+export function proxy (target: Object, sourceKey: string, key: string) {
+  sharedPropertyDefinition.get = function proxyGetter () {
+    return this[sourceKey][key]
+  }
+  sharedPropertyDefinition.set = function proxySetter (val) {
+    this[sourceKey][key] = val
+  }
+  Object.defineProperty(target, key, sharedPropertyDefinition)
+}
+
+```
+
+
+#### observe
+
+observe 方法的作用就是给非 VNode 的对象类型数据添加一个 Observer，如果已经添加过则直接返回，否则在满足一定条件下去实例化一个 Observer 对象实例。接下来我们来看一下 Observer 的作用。
+
+
+
+#### Observer
+
+Observer 是一个类，它的作用是给对象的属性添加 getter 和 setter，用于依赖收集和派发更新：
+
+
+回去把组件化debug下就行理清楚一下
+
+defineReactive 函数最开始初始化 Dep 对象的实例，接着拿到 obj 的属性描述符，然后对子对象递归调用 observe 方法，这样就保证了无论 obj 的结构多复杂，它的所有子属性也能变成响应式的对象，这样我们访问或修改 obj 中一个嵌套较深的属性，也能触发 getter 和 setter。最后利用 Object.defineProperty 去给 obj 的属性 key 添加 getter 和 setter。而关于 getter 和 setter 的具体实现，我们会在之后介绍。
+
+
+🎸实际上用js原生操作dom的情况下我们会直接去操作设置dom 这是我们开发人员已经知道会发生哪里的 这部分dom为什么会改变 那是因为关联的数据变化了
+
+所以通过数据操作dom  那怎么局部去修改  也就是diff比较
+
+还有是重新生成的   <----理解这句话
+
+
+
+
+
+### vue的依赖收集和派发更新
+
+它使得当被设置的对象被读取的时候会执行 getter 函数，而在当被赋值的时候会执行 setter 函数。 
+
+什么时候需要get就是我们模板渲染成真实dom的时候就是需要读取data对象的属性
+
+什么是依赖收集：当你一个变量没有被使用的时候（使用的概念是有跟dom联系在一起） 如果它被改变了
+
+就没必要去更新dom了吧 所以这时候得去收集依赖
+
+当 render function 被渲染的时候，因为会读取所需对象的值，所以会触发 getter 函数进行「 依赖收
+集」，「 依赖收集」的目的是将观察者 Watcher 对象存放到当前闭包中的订阅者 Dep 的 subs 中
+
+
+
+❗️把一个对象具有getter setter的属性 称为响应式属性
+
+Observer 是一个类，它的作用是给对象的属性添加 getter 和 setter，用于依赖收集和派发更新：
+
+defineReactive 的功能就是定义一个响应式对象，给对象动态添加 getter 和 setter
+
+https://zhuanlan.zhihu.com/p/45081605
+
+所以，Vue要能够知道一个数据是否被使用，实现这种机制的技术叫做依赖收集根据Vue官方文档的介绍
+所以在getter里，我们进行依赖收集（所谓依赖，就是这个组件所需要依赖到的数据），当依赖的数据被设置时，setter能获得这个通知，从而告诉render()函数进行重新计算
+
+
+
+观察者的作用：观察的目标发生改变，`通知`....
+
+1、角色
+Vue源码中实现依赖收集，实现了三个类： - Dep：扮演观察目标的角色，每一个数据都会有Dep类实例，它内部有个subs队列，subs就是subscribers的意思，保存着依赖本数据的观察者，当本数据变更时，调用dep.notify()通知观察者 - Watcher：扮演观察者的角色，进行观察者函数的包装处理。如render()函数，会被进行包装成一个Watcher实例 - Observer：辅助的可观测类，数组/对象通过它的转化，可成为可观测数据
+
+
+我们会发现，上述vue依赖收集的场景，正是一种一对多的方式（一个数据变更了，多个用到这个数据的地方要能够做出处理），而且，依赖的数据变更了，就一定要做出处理，所以观察者模式天然适用于解决依赖收集的问题。 那么，在Vue依赖收集里：谁是观察者？谁是观察目标？ 显然： - 依赖的数据是观察目标 - 视图、计算属性、侦听器这些是观察者
+
+Dep：扮演观察目标的角色，每一个数据都会有Dep类实例，它内部有个subs队列，subs就是subscribers的意思，保存着依赖本数据的观察者，当本数据变更时，调用dep.notify()通知观察者
+
+
+Watcher：扮演观察者的角色，进行观察者函数的包装处理
+
+
+Observer：辅助的可观测类，数组/对象通过它的转化，可成为可观测数据
+
+
+总结来说就是： `只为对象/数组 实例一个Observer类的实例`，而且就只会实例化一次，并且需要数据是可配置的时候才会实例化Observer类实例。 那么，Observer类又干嘛了呢？且看以下源码：
+
+Watcher扮演的角色是观察者，它关心数据，在数据变化后能够获得通知，并作出处理。一个组件里可以有多个Watcher类实例，Watcher类包装观察者函数，而观察者函数使用数据。 观察者函数经过Watcher是这么被包装的： - 模板渲染：this._watcher = new Watcher(this, render, this._update) - 计算属性：
+
+computed: {
+    name() {
+        return `${this.firstName} ${this.lastName}`;
+    }
+}
+/*
+会形成
+new Watcher(this, function name() {
+    return `${this.firstName} ${this.lastName}`
+}, callback);
+*/
+在Watcher类里做的事情，概括起来则是： 1、传入组件实例、观察者函数、回调函数、选项，然后我们先解释清楚4个变量：deps、depIds、newDeps、newDepIds，它们的作用如下： - deps：缓存上一轮执行观察者函数用到的dep实例 - depIds：Hash表，用于快速查找 - newDeps：存储本轮执行观察者函数用到的dep实例 - newDepIds：Hash表，用于快速查找
+
+2、进行初始求值，初始求值时，会调用watcher.get()方法 3、watcher.get()会做以下处理：初始准备工作、调用观察者函数计算、事后清理工作 4、在初始准备工作里，会将当前Watcher实例赋给Dep.target，清空数组newDeps、newDepIds 5、执行观察者函数，进行计算。由于数据观测阶段执行了defineReactive()，所以计算过程用到的数据会得以访问，从而触发数据的getter，从而执行watcher.addDep()方法，将特定的数据记为依赖 6、对每个数据执行watcher.addDep(dep)后，数据对应的dep如果在newDeps里不存在，就会加入到newDeps里，这是因为一次计算过程数据有可能被多次使用，但是同样的依赖只能收集一次。并且如果在deps不存在，表示上一轮计算中，当前watcher未依赖过某个数据，那个数据相应的dep.subs里也不存在当前watcher，所以要将当前watcher加入到数据的dep.subs里 7、进行事后清理工作，首先释放Dep.target，然后拿newDeps和deps进行对比，接着进行以下的处理： - newDeps里不存在，deps里存在的数据，表示是过期的缓存数据。相应的，从数据对应的dep.subs移除掉当前watcher - 将newDeps赋给deps，表示缓存本轮的计算结果，这样子下轮计算如果再依赖同一个数据，就不需要再收集了
+
+8、当某个数据更新时，由于进行了setter拦截，所以会对该数据的dep.subs这一观察者队列里的watchers进行通知，从而执行watcher.update()方法，而update()方法会重复求值过程（即为步骤3-7），从而使得观察者函数重新计算，而render()这种观察者函数重新计算的结果，就使得视图同步了最新的数据
+
+
+
+computed-render -> normal-watcher -> render-watcher
+
+
+
+观察者存在多种  也就是肯定存在多个watcher 计算属性 watch函数 还有渲染watch(render watch))
+
+watch(er)就是我们所说的观察者  我们的目的就是观察到你变为作出通知反应 比如通知render改更新了
+
+Dep--->dependence (依赖)
+
+
+每个数据比如a他有哪些依赖(我们需要去收到这些依赖 通知观察者有这些依赖)
+
+
+回顾一下，Vue响应式原理的核心就是Observer、Dep、Watcher。
+Observer中进行响应式的绑定，在数据被读的时候，触发get方法，执行Dep来收集依赖，也就是收集Watcher。
+在数据被改的时候，触发set方法，通过对应的所有依赖(Watcher)，去执行更新。比如watch和computed就执行开发者自定义的回调方法。
+
+作者：苍耳QAQ
+链接：https://juejin.im/post/5cf3cccee51d454fa33b1860
+来源：掘金
+著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。
+
+
+Observer是使数据变为响应式数据
+
+Watcher是观察者（跟setter区分开来）
+
+Dep-->Dependence是收集依赖
+
+实际上这里为什么是要观察者模式 （是因为收集完依赖必定要需要观察者）
+
+
+解释： 有些地方说观察者模式和发布/订阅模式是一样的，其实是不完全等同的，发布/订阅模式中，其解耦能力更近一步，发布者只要做好消息的发布，而不关心消息有没有订阅者订阅。而观察者模式则要求两端同时存在
+
+https://zhuanlan.zhihu.com/p/45081605
+
+
+上面我们说每一个数据都会有一个Dep类的实例，具体是什么意思呢？在讲解数据观测之前，我们先给个具体的例子，表明处理前后的变化，如下所示的对象（即为options.data）
+
+{
+    a: 1,
+    b: [2, 3, 4],
+    c: {
+        d: 5
+    }
+}
+在配置完数据观测后，会变成这样子：
+
+{
+    __ob__, // Observer类的实例，里面保存着Dep实例__ob__.dep => dep(uid:0)
+    a: 1,   // 在闭包里存在dep(uid:1)
+    b: [2, 3, 4], // 在闭包里存在着dep(uid:2)，还有b.__ob__.dep => dep(uid:4)
+    c: {
+        __ob__, // Observer类的实例，里面保存着Dep实例__ob__.dep => dep(uid:5)
+        d: 5 // 在闭包里存在着dep(uid:6)
+    }
+}
+
+如果是普通数据非引用数据类型？
+
+总结来说就是： 只为对象/数组 实例一个Observer类的实例，而且就只会实例化一次，并且需要数据是可配置的时候才会实例化Observer类实例。 那么，Observer类又干嘛了呢？且看以下源码：
+
+
+
+总结起来，就是： - 将Observer类的实例挂载在__ob__属性上，提供后续观测数据使用，以及避免被重复实例化。然后，实例化Dep类实例，并且将对象/数组作为value属性保存下来 - 如果value是个对象，就执行walk()过程，遍历对象把每一项数据都变为可观测数据（调用defineReactive方法处理） - 如果value是个数组，就执行observeArray()过程，递归地对数组元素调用observe()，以便能够对元素还是数组的情况进行处理
+
+
+
+你要明白 数据驱动视图  的做法给我想会怎么做 不考虑diff 
+我们这样很方便的想到  数据改变 重新生成视图  这样就不会顾及到 如何插入新建dom 小范围的
+
+我们直接大范围的更新  他是这样思考dom操作的  哎呀不知道怎么讲
+
+
+你想想 a和b兄弟 a改变了 b没有改变 那就可能会同事更新页面
+
+不像我们直接操作dom 只操作b的dom
+
+但是直接操作dom很容易引起回流和重绘
+
+我们要通知那个使用到数据的地方，而使用这个数据的地方有很多，而且类型还不一样，有可能是模板，有可能是用户写的一个 watch，所以这个时候我们需要抽象出一个能集中处理这些不同情况的类，然后我们在依赖收集的阶段只收集这个封装好的类的实例进来，通知也只通知它一个，然后它在负责通知其他地方，所以我们要抽象的这个东西需要先起一个好听的名字，嗯，就叫它watcher吧~
+
+所以现在可以回答上面的问题，收集谁？？收集 Watcher。
+
+
+收集依赖实际就是去收集Watcher
+
+收集到Dep中，Dep是专门用来存储依赖的。
+
+收集谁，换句话说是当属性发生变化后，通知谁。
+
+收集这些依赖的目的就是数据改变去通知这些依赖  Watcher就是干这种事 我们去通知Watcher我发生变化了 Watcher通知对应的目标去渲染
+
+
+依赖和观察者
+
+我手机的依赖就是这些观察者  观察者就是去观察这些被使用的数据 这样一想  我们去收集watcher就是我们要的依赖
+
+你可以这样想 render函数需要我们的数据 他就是依赖 所以他派出render watcher去观察这些数据  一旦有变动就去通知
+
+本来你可以这样想依赖肯定是render函数 因为render函数需要这些数据 但是它交给watcher去实现了 去观察这些数据
+
+watcher 是一个中介的角色，数据发生变化通知给 watcher，然后watcher在通知给其他地方。
+
+每个数据被get时候 就会收集依赖
+
+
+我们定义了一个 Observer 类，他的职责是将 data 转换成可以被侦测到变化的 data，并且新增了对类型的判断，如果是 value 的类型是 Array 循环 Array将每一个元素丢到 Observer 中。
+
+
+https://github.com/berwin/Blog/issues/17  <-----讲的太好了
+
+
+Observer 类  -->包含了defineReactive方法 它是总的讲=将data数据转化为响应数据 当然单独的defineReactive也行
+
+Observer 类它就是对defineReactive的封装
+
+
+我们定义了一个 Observer 类，他的职责是将 data 转换成可以被侦测到变化的 data，并且新增了对类型的判断，如果是 value 的类型是 Array 循环 Array将每一个元素丢到 Observer 中。
+
+并且在 value 上做了一个标记 __ob__，这样我们就可以通过 value 的 __ob__ 拿到Observer实例，然后使用 __ob__ 上的 dep.notify() 就可以发送通知啦。
+
+
+
+
+响应式数据 --> 就是数据改变了 就会去通知依赖要准备作出操作了
+所以这个数据具备通知依赖的方法
+
+
+收集依赖的过程 肯定是我去访问使用这个数据 才会被这个数据收集到
+
+
+也就是响应式数据具备收集依赖功能和派发更新的功能
+
+
+Dep是存储依赖的地方sub放watcher
+
+
+observe 是用来观察数据变化的
+
+
+### methods
+```javascript
+ // 你应该要理解成methods是个方法对象 fn就相当于在外部的函数声明一样 只不过这里是对象 这个认知我提醒过很多次了⚠️
+ // 这样一想确实突然醒悟
+  methods:{
+
+    fn(){
+
+    }
+  }
+```
+
+```javascript
+Vue.prototype._initMethods = function () {
+  var methods = this.$options.methods
+  if (methods) {
+    for (var key in methods) {
+      this[key] = bind(methods[key], this)
+    }
+  }
+}
+```
+想想我们为什么可以直接this.fn()  是因为经历过这个步骤了
+this[key] = bind(methods[key], this)
+
+this.$options 是初始化当前vue实例时传入的参数，举个栗子
+
+```javascript
+const vm = new Vue({
+  data: data,
+  methods: {},
+  computed: {},
+  ...
+})
+```
+上面实例化Vue的时候，传递了一个Object字面量，这个字面量就是 this.$options
+
+清楚了这些之后，我们看这个逻辑其实就是把 this.$options.methods 中的方法绑定到this上，这也就不难理解为什么我们可以使用 this.xxx 来访问方法了
+
+⚠️就是以后写methods方法不会再傻傻那种死记单一理解成方法 实际就是写的methods对象 以前是没有这种认知的
+
+### data
+
+Data 跟 methods 类似，但是比 methods 高级点，主要高级在两个地方，proxy 和 observe
+
+proxy
+
+Data 没有直接写到 this 中，而是写到 this._data 中（注意：this.$options.data 是一个函数，data是执行函数得到的），然后在 this 上写一个同名的属性，通过绑定setter和getter来操作 this._data 中的数据
+
+
+```javascript
+
+Vue.prototype._proxy = function (key) {
+  // isReserved 判断 key 的首字母是否为 $ 或 _
+  if (!isReserved(key)) {
+    var self = this
+    Object.defineProperty(self, key, {
+      configurable: true,
+      enumerable: true,
+      get: function proxyGetter () {
+        return self._data[key]
+      },
+      set: function proxySetter (val) {
+        self._data[key] = val
+      }
+    })
+  }
+}
+
+```
+首先所有的data属性key都会经过proxy代理后 Object.defineProperty这里是给我self也就是vm添加属性
+
+我访问这个属性就把self._data[key] return回去
+
+
+我现在好奇_data是怎么来的
+`Data 没有直接写到 this 中，而是写到 this._data 中`
+`this.$options.data 是一个函数，data是执行函数得到的`
+
+```javascript
+   
+
+function initData (vm: Component) {
+  let data = vm.$options.data
+  data = vm._data = typeof data === 'function'
+    ? getData(data, vm)
+    : data || {}
+  if (!isPlainObject(data)) {
+    data = {}
+    process.env.NODE_ENV !== 'production' && warn(
+      'data functions should return an object:\n' +
+      'https://vuejs.org/v2/guide/components.html#data-Must-Be-a-Function',
+      vm
+    )
+  }
+
+```
+
+proxy还顺便做下错误❌处理情况，很好用
+
+
+### observe
+
+observe 是用来观察数据变化的，先看一段源码：
+
+```javascript
+
+Vue.prototype._initData = function () {
+  var dataFn = this.$options.data
+  var data = this._data = dataFn ? dataFn() : {}
+  if (!isPlainObject(data)) {
+    data = {}
+    process.env.NODE_ENV !== 'production' && warn(
+      'data functions should return an object.',
+      this
+    )
+  }
+  var props = this._props
+  // proxy data on instance
+  var keys = Object.keys(data)
+  var i, key
+  i = keys.length
+  while (i--) {
+    key = keys[i]
+    // there are two scenarios where we can proxy a data key:
+    // 1. it's not already defined as a prop
+    // 2. it's provided via a instantiation option AND there are no
+    //    template prop present
+    if (!props || !hasOwn(props, key)) {
+      this._proxy(key)
+    } else if (process.env.NODE_ENV !== 'production') {
+      warn(
+        'Data field "' + key + '" is already defined ' +
+        'as a prop. To provide default value for a prop, use the "default" ' +
+        'prop option; if you want to pass prop values to an instantiation ' +
+        'call, use the "propsData" option.',
+        this
+      )
+    }
+  }
+  // observe data
+  observe(data, this)
+}
+
+```
+
+上面源码中可以看到先处理 _proxy，之后把 data 传入了 observe 中， observe 会把 `data 中的key`(就是data的属性成员)转换成getter与setter（变为响应式数据），当触发getter时会收集依赖，当触发setter时会触发消息，更新视图，具体可以看之前写的一篇文章《深入浅出 - vue之深入响应式原理》,
+
+
+什么是响应式数据 自带getter setter getter是数据具有收集依赖的能力 setter是具有派发更新的能力⚠️
+
+那么问题来了什么是oberve和observer
+
+总结起来 data 其实做了两件事
+
+让this.$options.data 中的数据可以在 this 中访问
+观察数据的变化做出不同的响应
+
+
+
+
+### computed
+
+想想computed里面的函数我们直接这样this.xxx就能访问到（函数必定具有return
+
+
+计算属性在vue中也是一个非常常用的功能，而且好多同学搞不清楚它跟watch有什么区别，这里就详细说说计算属性到底是什么，以及它是如何工作的
+
+简单点说，Computed 其实就是一个 getter 和 setter，(这句话的意思Computed里面的key就是vue响应式对象)经常使用 Computed 的同学可能知道，Computed 有几种用法）
+
+
+```javascript
+
+var vm = new Vue({
+  data: { a: 1 },
+  computed: {
+    // 用法一： 仅读取，值只须为函数
+    aDouble: function () {
+      return this.a * 2
+    },
+    // 用法二：读取和设置
+    aPlus: {
+      get: function () {
+        return this.a + 1
+      },
+      set: function (v) {
+        this.a = v - 1
+      }
+    }
+  }
+})
+
+```
+
+当依赖的数据发生变化时 watcher 可以帮助我们接收到消息
+
+
+先说上面那两种用法，一种 value 的类型是function，一种 value 的类型是对象字面量，对象里面有get和set两个方法，talk is a cheap, show you a code...
+
+```javascript
+
+function noop () {}
+Vue.prototype._initComputed = function () {
+  var computed = this.$options.computed
+  if (computed) {
+    for (var key in computed) {
+      var userDef = computed[key]
+      var def = {
+        enumerable: true,
+        configurable: true
+      }
+      if (typeof userDef === 'function') {
+        def.get = makeComputedGetter(userDef, this)
+        def.set = noop
+      } else {
+        def.get = userDef.get
+          ? userDef.cache !== false
+            ? makeComputedGetter(userDef.get, this)
+            : bind(userDef.get, this)
+          : noop
+        def.set = userDef.set
+          ? bind(userDef.set, this)
+          : noop
+      }
+      Object.defineProperty(this, key, def) // 添加属性 属性自带了getter setter 这样一分析确实轻松很多
+    }
+  }
+}
+
+```
+
+可以看到对两种不同的类型做了两种不同的操作，function 类型的会把函数当做 getter 赋值给 def.get
+
+而 object 类型的直接取 def.get 当做 getter 取def.set 当做 setter。
+
+#### 理解Computed对象的缓存作用是什么❓
+
+我们说过了Computed对象成员属性本质上就是响应式对象 当我们访问这个对象 实际就是经过了getter属性  它内部返回一个函数
+
+假设这个函数是个复杂的计算的函数 那我们每次都访问就要经历一次计算 这样是浪费性能的 所以这是与methods区别的原因 <---这就是问题的本质啊
+
+所以，对于任何复杂逻辑，你都应当使用计算属性。❗️❗️❗️
+复杂逻辑计算果断用Computed❗️❗️❗️ <----终于想明白了 以前斯懂非懂
+
+
+
+那么他是怎么做缓存的？
+
+
+当 watcher 接收到消息时，会执行 update 这个方法，这个方法因为我们的 watcher 是 lazy 为 true 的所以走第一个判断条件里的逻辑，里面很直接，就是把 this.dirty 设置了 true
+
+这里就又引发了一个问题，我们怎么知道 getter 中到底有哪些依赖，毕竟使用Computed开发的人并不会告诉我们他用到了哪些依赖，那我们怎么知道他使用了哪些依赖？
+
+
+依赖就是我们所说的watcher  一般的我认为vue里面有这三种依赖 render computed watch
+
+Dep:就是用来存放依赖的
+
+vue在全局弄了一个 Dep.target 用来存当前的watcher，全局只能同时存在一个
+
+
+
+
+
+醒悟 ：所以我们已经研究了大部分为什么可以this.xxx
+
+
+
+
+
+#### 响应式原理
+
+但这就引发了一个问题，我们怎么知道当 setter 触发的时候更新哪个DOM？
+
+对 这是我一直想表达的问题
+
+
+
+
+
+我们要知道谁收集依赖？ 依赖是谁？依赖存在哪里?
+
+谁收集依赖实际就是数据在收集 因为响应式数据需要知道谁在使用它
+
+### 依赖收集放在哪？也就是依赖存在哪里?
+
+但是这样写有点耦合，我们把依赖收集这部分代码封装起来，写成下面的样子：
+
+Dep类专门存放依赖的
+
+let dep = new Dep()        // 修改
+
+这一次代码看起来清晰多了，顺便回答一下上面问的问题，依赖收集到哪？收集到Dep中，Dep是专门用来存储依赖的。
+
+收集谁？
+
+上面我们假装 window.target 是需要被收集的依赖，细心的同学可能已经看到，上面的代码 window.target 已经改成了 Dep.target，那 Dep.target是什么？我们究竟要收集谁呢？？
+
+就是收集watcher
+
+watcher 是一个中介的角色，数据发生变化通知给 watcher，然后watcher在通知给其他地方。
+
+
+
+### 怎么收集依赖的
+
+vue这样想的 当前下只有一个watcher（假设是render watcher 实际你就是这样认为当前模板准备要去读data的key,此时这个时候的全局Dep.target是render watcher）,这个watcher只要去读 我就把push到我这个响应式数据里的Dep类里的储存依赖之地sub
+
+
+原来Dep.target是这样
+
+这段代码可以把自己主动 push 到 data.a.b.c 的 Dep 中去。
+
+因为我在 get 这个方法中，先把 Dep.traget 设置成了 this，也就是当前watcher实例，然后在读一下 data.a.b.c 的值。
+
+因为读了 data.a.b.c 的值，所以肯定会触发 getter。
+
+触发了 getter 上面我们封装的 defineReactive 函数中有一段逻辑就会从 Dep.target 里读一个依赖 push 到 Dep 中。
+
+所以就导致，我只要先在 Dep.target 赋一个 this，然后我在读一下值，去触发一下 getter，就可以把 this 主动 push 到 keypath 的依赖中，有没有很神奇~
+
+依赖注入到 Dep 中去之后，当这个 data.a.b.c 的值发生变化，就把所有的依赖循环触发 update 方法，也就是上面代码中 update 那个方法。
+
+update 方法会触发参数中的回调函数，将value 和 oldValue 传到参数中。
+
+所以其实不管是用户执行的 vm.$watch('a.b.c', (value, oldValue) => {}) 还是模板中用到的data，都是通过 watcher 来通知自己是否需要发生变化的。
+
+
+
+oberve的功能就是用来监测数据的变化 observe而不是observer类 
+
+observer类 是让数据转化为响应式数据 你可以理解是包装defineReactive
+
+黄毅老师的理解
+defineReactive 的功能就是定义一个响应式对象，给对象动态添加 getter 和 setter
+Observer 是一个类，它的作用是给对象的属性添加 getter 和 setter
+
+1、initData
+现在我们重点分析下initData，这里主要做了两件事，一是将_data上面的数据代理到vm上，二是通过执行 *observe(data, true / asRootData */)**将所有data变成可观察的，即对data定义的每个属性进行getter/setter操作，这里就是Vue实现响应式的基础；observe的实现如下 src/core/observer/index.js
+
+实际就是开始操作数据 -->变为响应式数据和检测  observe-->observer-->defineReactive
+
+可以这样理解  哎呀就是一个函数  根本没有可比性  observe与observer没有可比性❗❗❗
+
+
+### 计划
+
+我们知道了原理还要知道怎么去实现
+这个周期《深入浅出Vue.js》要跟着实现
