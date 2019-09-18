@@ -14,7 +14,10 @@ export default {
   },
   data() {
     return {
-      message: "hello world❗️❗️❗️"
+      message: "hello world❗️❗️❗️",
+      obj: {
+        msg: "11"
+      }
     };
   },
   created() {
@@ -25,6 +28,9 @@ export default {
   },
   mounted() {
     console.log("mounted父组件App被执行了");
+    console.log(this);
+    console.log(this.message);
+    console.log(this.obj);
   }
 };
 </script>
