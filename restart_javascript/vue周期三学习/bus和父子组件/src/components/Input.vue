@@ -1,6 +1,6 @@
 <template>
   <div class="input">
-    <input type="text" @keyup="handleKeyUp" @getChange="HandleGetChange" />
+    <Myinput type="text" @keyup="handleKeyUp" @getChange="HandleGetChange" />
   </div>
 </template>
 
@@ -14,7 +14,7 @@ export default {
   },
   methods: {
     handleKeyUp(e) {
-      this.$emit("getChange", e.target.value);
+      this.$emit("getChange1", e.target.value);
     },
     HandleGetChange(params) {
       console.log("params", params);
