@@ -14,7 +14,7 @@ export default {
   },
   methods: {
     handleKeyUp(e) {
-      this.$emit("getChange1", e.target.value);
+      this.$emit("getChange", e.target.value);
     },
     HandleGetChange(params) {
       console.log("params", params);
