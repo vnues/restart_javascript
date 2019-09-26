@@ -777,3 +777,284 @@ WebSocket 是一种在客户端与服务器之间保持TCP长连接的网络协�
 
 好了顺便把token JWT 单点登录的问题解决了
 
+
+## JWT与session
+
+认证和授权，其实吧简单来说就是:认证就是让服务器知道你是谁，授权就是服务器让你知道你什么能干，什么不能干，认证授权俩种方式：Session-Cookie与JWT，下面我们就针对这两种方案就行阐述。
+
+如果使用session  客户端存的是session_id  服务端存的是session信息
+
+那么的怎么认证session session_id 光一个id我是可以伪造的啊  ---session_id（可以加密签名下防止篡改）   但是还是可能有危险
+
+session保存在服务器端，相对较为安全   
+
+
+
+## JWT
+
+JSON Web Token（JWT）是一种开放标准（RFC 7519），它定义了一种紧凑且独立的方式，可以将各方之间的信息作为JSON对象进行安全传输。该信息可以验证和信任，因为是经过数字签名的。
+
+4.前端在每次请求时将JWT放入HTTP Header中的Authorization位。(解决XSS和XSRF问题)
+
+放在 Authorization是   别人拿不到的对吧 通过js方式获取不了
+
+
+安全性
+JWT签名旨在防止在客户端被篡改，但也可以对其进行加密，以确保token携带的claim 非常安全。JWT主要是直接存储在web存储（本地/session存储）或cookies中。 JavaScript可以访问同一个域上的Web存储。这意味着你的JWT可能容易受到XSS（跨站脚本）攻击。恶意JavaScript嵌入在页面上，以读取和破坏Web存储的内容。事实上，很多人主张，由于XSS攻击，一些非常敏感的数据不应该存放在Web存储中。一个非常典型的例子是确保你的JWT不将过于敏感/可信的数据进行编码，例如用户的社会安全号码。
+最初，我提到JWT可以存储在cookie中。事实上，JWT在许多情况下被存储为cookie，并且cookies很容易受到CSRF（跨站请求伪造）攻击。预防CSRF攻击的许多方法之一是确保你的cookie只能由你的域访问。作为开发人员，不管是否使用JWT，确保必要的CSRF保护措施到位以避免这些攻击。
+现在，JWT和session ID也会暴露于未经防范的重放攻击。建立适合系统的重放防范技术，完全取决于开发者。解决这个问题的一个方法是确保JWT具有短期过期时间。虽然这种技术并不能完全解决问题。然而，解决这个挑战的其他替代方案是将JWT发布到特定的IP地址并使用浏览器指纹。
+注意：使用HTTPS / SSL确保你的Cookie和JWT在客户端和服务器传输期间默认加密。这有助于避免中间人攻击！
+
+
+
+jwt 之前，使用 session 来做用户认证。
+
+
+
+首先我们需要从感性上认识 JWT。本质上来说 JWT 也是 token
+
+token有很多种形式
+
+session形式的token jwt形式的token
+
+JWT 究竟带来了什么
+JWT 的目的不是为了隐藏或者保密数据，而是为了确保数据确实来自被授权的人创建的（不被篡改）
+
+用于接口调用
+接下来在 API 调用中就可以附上 JWT （通常是在 HTTP Header 中）。又因为 SP 会与程序共享一个 secret，所以后端可以通过 header 提供的相同的 hash 算法来验证签名是否正确，从而判断应用是否有权力调用 API
+
+作者：李熠
+链接：https://juejin.im/post/5b3b870a5188251ac85826b8
+来源：掘金
+著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。
+
+
+虽然解析可以  但那是额外信息 我们可以拿到  别人就算看到也没关系
+
+
+但是加密的信息不会被改变 后端有自己的一套解密方式
+
+相信你已经察觉了，理论上来说，JWT 机制可以取代 session 机制。用户不需要提前进行登陆，后端也不需要 Redis 记录用户的登陆信息。客户端的本地保存一份合法的 JWT, 当用户需要调用接口时，附带上该合法的 JWT，每一次调用接口，后端都使用请求中附带的 JWT 做一次合法性的验证。这样也间接达到了认证用户的目的
+
+
+
+以前是用seesion验证  现在jwt取代了
+
+
+首先你需要再 Google API 上创建一个服务账号（service account）
+获取服务账号的认证信息（credential），包括邮箱地址，client ID，以及一对公钥/私钥
+使用 client ID 和私钥创一个签名的 JWT，然后将这个 JWT 发送给 Google 交换 access token
+Google 返回 access token
+程序通过 access token 访问 API
+
+甚至你可以不需要向 Google 索要 access token，而是携带 JWT 作为 HTTP header 里的  bearer token 直接访问 API 也是可以的。我认为这才是 JWT 的最大魅力❗️对啊  这也是我们前后端联调直接塞token的好处啊
+
+
+JWT 顾名思义，它是 JSON 结构的 token，由三部分组成：1) header 2) payload 3) signature
+
+
+
+header 和payload只是经过encode的
+
+
+所以我一直在想我们jwt.io输入这串token我们就可以显示信息 这样任何人都能看到了 岂不是有毒吗 
+
+但是这个是保存不重要的信息
+
+关键的是在signature
+
+
+
+signature
+signature 译为「签名」
+创建签名要分以下几个步骤：
+
+你需要从接口服务端拿到密钥，假设为secret
+将header进行 base64 编码，假设结果为headerStr
+将payload进行 base64 编码，假设结果为payloadStr
+将headerStr和payloadStr用.字符串拼装起来成为字符data
+以data和secret作为参数，使用哈希算法计算出签名
+
+如果上述描述还不直观，用伪代码表示就是：
+// signature algorithm
+data = base64urlEncode( header ) + “.” + base64urlEncode( payload )
+signature = Hash( data, secret );
+复
+
+作者：李熠
+链接：https://juejin.im/post/5b3b870a5188251ac85826b8
+来源：掘金
+著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。
+
+
+
+JWT 究竟带来了什么
+JWT 的目的不是为了隐藏或者保密数据，而是为了确保数据确实来自被授权的人创建的（不被篡改）
+回想一下，当你拿到 JWT 时候，你完全可以在没有 secret 的情况下解码出 header 和 payload，因为 header 和 payload 只是经过了 base64 编码（encode）而已，编码的目的在于利于数据结构的传输。虽然创建 signature 的过程近似于加密 (encrypt)，但本质其实是一种签名 (sign) 的行为，用于保证数据的完整性，实际上也并且并没有加密任何数据
+
+作者：李熠
+链接：https://juejin.im/post/5b3b870a5188251ac85826b8
+来源：掘金
+著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。
+
+用于接口调用
+接下来在 API 调用中就可以附上 JWT （通常是在 HTTP Header 中）。又因为 SP 会与程序共享一个 secret，所以后端可以通过 header 提供的相同的 hash 算法来验证签名是否正确，从而判断应用是否有权力调用 API
+
+作者：李熠
+链接：https://juejin.im/post/5b3b870a5188251ac85826b8
+来源：掘金
+著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。
+
+
+
+也就是JWT 用于授权 有没有调这个接口的能力     授权跟验证有什么区别？？？？？？
+
+
+
+❗️❗️❗️授权
+
+
+用户在浏览器登陆之后，服务端为用户生成唯一的 session id，存储在服务端的存储服务（例如 MySql, Redis）中
+该 session id 也同时返回给浏览器，以 SESSION_ID 为 KEY 存储在浏览器的 cookie 中
+如果用户再次访问该网站，cookie 里的 SESSION_ID 会随着请求一同发往服务端
+服务端通过判断 SESSION_ID 是否已经在 Redis 中判断用户是否处于登陆状态
+
+作者：李熠
+链接：https://juejin.im/post/5b3b870a5188251ac85826b8
+来源：掘金
+著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。
+
+
+
+JSON Web令牌（JWT）是一种 JSON 对象，在 RFC 7519 中定义为在两方之间表示一组信息的安全方式。 JWT 由头部（header），负载（payload）和签名（signature）组成。
+
+
+header.payload.signature
+
+应该注意，双引号字符串被认为是有效的 JSON 对象
+
+
+然后，在加入周期的编码头和编码有效载荷上应用`带有密钥的`指定签名算法，我们得到签名所需的散列数据。 在我们的例子中，这意味着在数据字符串上应用 HS256 算法，并将密钥设置为字符串“secret”，以获取 hashedData字符串。 之后，通过base64url 编码 hashedData 字符串，我们得到以下JWT签名：
+
+`由于 JWT 仅被签名和编码，并且由于 JWT 未加密，因此 JWT 不能保证敏感数据的安全性。`
+
+
+Step 5. 校验 JWT
+在我们的示例中，我们使用的是由 HS256 算法签名的JWT，其中只有身份验证服务器和应用服务器知道密钥。当应用程序设置其身份验证过程时，应用程序服务器从身份验证服务器接收密钥。由于应用程序知道密钥，当用户对应用程序进行带有 JWT 附加的 API 调用时，应用程序可以执行与 JWT 上的步骤3相同的签名算法。然后，应用程序可以验证从其自己的哈希操作获得的签名是否与 JWT 本身上的签名匹配（即，它与由认证服务器创建的 JWT 签名匹配）。如果签名匹配，则表示 JWT 有效，表示 API 调用来自可信源。否则，如果签名不匹配，则表示收到的 JWT 无效，这可能是对应用程序的潜在攻击的指示。因此，通过验证 JWT，应用程序在其自身和用户之间添加了一层信任。
+
+
+
+# 在 Web 应用中，用户的认证和鉴权是非常重要的一环，实践中有多种可用方案，并且各有千秋。 <-----这是原因
+
+
+### 基于 Session 的会话管理
+在 Web 应用发展的初期，大部分采用基于 Session 的会话管理方式，逻辑如下。
+
+客户端使用用户名密码进行认证
+服务端生成并存储 Session，将 SessionID 通过 Cookie 返回给客户端
+客户端访问需要认证的接口时在 Cookie 中携带 SessionID
+服务端通过 SessionID 查找 Session 并进行鉴权，返回给客户端需要的数据
+
+
+基于 Session 的方式存在多种问题。
+
+服务端需要存储 Session，并且由于 Session 需要经常快速查找，通常存储在内存或内存数据库中，同时在线用户较多时需要占用大量的服务器资源。
+当需要扩展时，创建 Session 的服务器可能不是验证 Session 的服务器，所以还需要将所有 Session 单独存储并共享。
+由于客户端使用 Cookie 存储 SessionID，在跨域场景下需要进行兼容性处理，`同时这种方式也难以防范 CSRF 攻击`。
+
+
+
+Web应用的认证和鉴权真的是一大知识点 重点
+
+
+
+### 基于 Token 的会话管理
+鉴于基于 Session 的会话管理方式存在上述多个缺点，无状态的基于 Token 的会话管理方式诞生了，所谓无状态，就是服务端不再存储信息，甚至是不再存储 Session，逻辑如下。
+
+客户端使用用户名密码进行认证
+服务端验证用户名密码，通过后生成 Token 返回给客户端
+客户端保存 Token，访问需要认证的接口时在 URL 参数或 HTTP Header 中加入 Token
+服务端通过解码 Token 进行鉴权，返回给客户端需要的数据
+
+
+token和JWT的区别  也就是session不是token类型 这点认识清楚
+
+
+JWT 是 JSON Web Token 的缩写，`JWT 本身没有定义任何技术实现，它只是定义了一种基于 Token 的会话管理的规则`（可以理解就是JWT token类型），涵盖 Token 需要包含的标准内容和 Token 的生成过程。
+
+
+JWT 的 Header 中存储了所使用的加密算法和 Token 类型。
+{
+  "alg": "HS256",
+  "typ": "JWT"
+}
+复制代码Payload 是负载，JWT 规范规定了一些字段，并推荐使用，开发者也可以自己指定字段和内容，例如下面的内容。
+{
+  username: 'yage',
+  email: 'sa@simpleapples.com',
+  role: 'user',
+  exp: 1544602234
+}
+需要注意的是，`Payload的内容只经过了 Base64 编码，对客户端来说当于明文存储，所以不要放置敏感信息。`
+`Signature 部分用来验证 JWT Token 是否被篡改`，所以这部分会使用一个 Secret 将前两部分加密，逻辑如下。
+HMACSHA256(base64UrlEncode(header) + "." + base64UrlEncode(payload), secret)
+
+
+`Signature 部分用来验证 JWT Token 是否被篡改` 能够监控这个就达到安全目的了  这样思考  本身这个是签名 而不是加密
+
+这两者区别 要谷歌下
+
+
+JWT 优势 & 问题
+JWT 拥有基于 Token 的会话管理方式所拥有的一切优势，不依赖 Cookie，使得其可以防止 CSRF 攻击，也能在禁用 Cookie 的浏览器环境中正常运行。
+而 JWT 的最大优势是服务端不再需要存储 Session，使得服务端认证鉴权业务可以方便扩展，避免存储 Session 所需要引入的 Redis 等组件，降低了系统架构复杂度。但这也是 JWT 最大的劣势，由于有效期存储在 Token 中，JWT Token 一旦签发，就会在有效期内一直可用，无法在服务端废止，当用户进行登出操作，只能依赖客户端删除掉本地存储的 JWT Token，如果需要禁用用户，单纯使用 JWT 就无法做到了。
+
+我们好像把token保存在cookie里的存在localstorrage也行  我们不需要在set-cookie这样带过去 不需要 只需要带到header就行 或者参数也行
+
+
+在 JWT 的实践中，引入 Refresh Token，将会话管理流程改进如下。
+
+客户端使用用户名密码进行认证
+服务端生成有效时间较短的 Access Token（例如 10 分钟），和有效时间较长的 Refresh Token（例如 7 天）
+客户端访问需要认证的接口时，携带 Access Token
+如果 Access Token 没有过期，服务端鉴权后返回给客户端需要的数据
+如果携带 Access Token 访问需要认证的接口时鉴权失败（例如返回 401 错误），则客户端使用 Refresh Token 向刷新接口申请新的 Access Token
+如果 Refresh Token 没有过期，服务端向客户端下发新的 Access Token
+客户端使用新的 Access Token 访问需要认证的接口
+
+
+那么怎么找出 acess token和refresh token
+
+
+可以做自动登录，客户端保存着token就可以自动登录，存在cookie和localstorage都可以，各有利弊。
+
+
+
+注意我们以前用cookie做授权 是带到set-cookie 但是token不需要
+
+
+JWT token OAuth的区别
+
+这种方式的特点就是客户端的token中自己保留有大量信息，服务器没有存储这些信息，而只负责验证，不必进行数据库查询，执行效率大大提高。
+
+
+这个方式的技术其实很早就已经有很多实现了，而且还有现成的标准可用，这个标准就是JWT;
+
+也就是说实现token的是一种技术或者概念  实现它有很多种规则可以实现  现在的标准就是JWT 我们不用表达式哪种形式的token
+而是那种规则  虽然理解可以相近 但专业一点    理解规则❗️❗
+
+
+
+所以面试题可以这样问：token和session的区别
+
+
+https://juejin.im/post/5d01f82cf265da1b67210869  <-----这篇作为理解很不错
+
+# 最后总结今晚的学习成果    
+
+❗️❗JWT是一种token的实现形式  或者规则   理解成规则 而不是JWT 形式的token
+
+token的实现形式有很多种
+
+
+明天再大概总结下  再跟超哥交流
