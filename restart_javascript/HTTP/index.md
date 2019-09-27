@@ -1127,3 +1127,11 @@ token就是令牌，比如你授权（登录）一个程序时，他就是个依
 
 
 我们这里的前端是直接去跳授权就行
+
+
+如果token过期报401跳到gitlab授权 gitlab发现用户还是登陆的（应该是还有refresh_token）还有就不重新塞个token 后端可以把cookie直接写到浏览器
+
+
+### access_token和refresh_token
+
+https://juejin.im/post/5a56f7f75188257340262691
