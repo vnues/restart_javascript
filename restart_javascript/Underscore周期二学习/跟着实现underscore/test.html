@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Document</title>
+  </head>
+  <body>
+    <div style="color: lightpink;width:200px;height:200px;">
+      这是测试....................
+    </div>
+    <script src="./underscore.js"></script>
+    <script>
+      //const arrayMap=  _.map([1,2,3],{name:1})
+      //  console.log(arrayMap)
+      //  debugger
+      //  const objMap=_.map({name:"vnues",age:22,height:180},{name:"李白"})
+      //  console.log(objMap)
+      // debugger
+      // var sum = _.reduce([1, 2, 3], function(memo, num){ return memo + num; }, 0);
+      // console.log(sum)
+      // debugger
+      // _.sortedIndex([10, 20, 30, 40, 50], 35);
+      // var stooges = [{name: 'moe', age: 40}, {name: 'curly', age: 60}];
+      // _.sortedIndex(stooges, {name: 'larry', age: 50}, 'age');
+
+      // 二分法的本质 就是起点和终点 中点都会慢慢靠一起
+      // var sortedIndex = function(array, value) {
+      //     var low = 0;
+      //     var high =array.length ;
+      //   while (low < high) {
+      //     var mid = Math.floor((low + high) / 2);
+      //     if (array[mid] < value) low = mid + 1;
+      //     else high = mid;
+      //   }
+
+      //   return low;
+      // };
+      // sortedIndex([10, 20, 30, 40, 50], 38)
+
+      // debugger
+      // console.log(_.indexOf([1,2,NaN],NaN,1))
+      // console.log(_.indexOf([1,2,NaN],NaN,8)
+      // console.log(_.lastIndexOf([1,2,3,4,5,6],3,1))
+      // debuggers
+      // console.log(_.invoke([[5, 1, 7], [3, 2, 1]], 'sort',1,2))
+      // debugger
+      // 这个item是我们传入的[1,2]
+      // 那么怎么自定义函数操作obj||list ？
+      // Calls the method named by methodName on each value in the list. Any extra arguments passed to invoke will be forwarded on to the method invocation.
+      // _.invoke([[5,1,7],[3,4,1]],function(item){
+      //       console.log(item)
+      //       console.log(arguments)
+      //   },[1,2])
+      // debugger
+      // console.log(_.max([1,2,3,4], {name:"vnues"}))
+      // 这样写才只有一个子项
+      //  _.shuffle([{one:'one',two:'two',three:'three',four:'four'}]);
+
+      // _.shuffle({one:'one',two:'two',three:'three',four:'four'});
+      // debugger
+      // _.groupBy(['one', 'two', 'three'], 'length');
+      // debugger
+      // _.uniq([1,2,3,4,5],true);
+
+      // var func = function(greeting){ return greeting + ': ' + this.name };
+      //     func = _.bind(func, {name: 'moe'}, 'hi');
+      //    // func();
+      //    console.log(func)
+      //     debugger
+      //     var fn = new func()
+      //     console.log(fn)
+
+      // var Person = function () {
+      //     this.alert = function () {
+      //       console.log(this.name)
+      //     }
+
+      //   }
+      //   var context = { name: "vnues" }
+      //   Person.bind(context)
+      //   console.log(Person.alert())
+      //   console.log(context.alert())
+      //   var boy = new Person()
+      //   console.log(boy.alert())
+      // debugger
+      // var add = function(a, b,c,d,e) {
+      //   return a + b+c+d+e;
+      // };
+      // add5 = _.partial(add, _,20,_,40);
+      // console.log(add5(10,30,50));  // 20
+      // 可以确定参数的顺序就是_.partial(add, _,20,_,40);
+      // var buttonView = {
+      //   label: "underscore",
+      //   onClick: function() {
+      //     alert("clicked: " + this.label);
+      //   },
+      //   onHover: function() {
+      //     console.log("hovering: " + this.label);
+      //   }
+      // };
+      // debugger
+      // _.bindAll(buttonView, "onClick", "onHover");
+      // var fibonacci = _.memoize(function(n) {
+      //   return n < 2 ? n : fibonacci(n - 1) + fibonacci(n - 2);
+      // });
+      // fibonacci(10)
+      //           debugger
+      //           _.defer(function(){ alert('deferred'); });
+
+      // (function() {
+      //      // 用随机数的方式来模拟一个获取用户信息的方法
+      //     var getLogin = function() {
+      //     var a = parseint(Math . random() * 10) . toFixe(O)) ;
+      //     if (a % 2 == 0) {
+      //     return { login : false }
+      //     }
+      //     return {
+      //     login: txrue,
+      //     userinfo : {
+      //     nickname :'jake',
+      //     vip : 11,
+      //     userid:'666666'
+      //         }
+      //        }
+      //     }
+      //     var withLogin = function(basicFn) {
+      //     var loginInfo = getLogin() ;
+      //     // 将 loginInfo 参数的形式传入基础函数中
+      //     return basicFn.bind(null, loginInfo);
+      //     }
+      //     window.withLogin = withLogin;
+      // })
+      // 但是组合函数的基本就是函数执行后作为返回值 具体返回值是值还是函数看执行函数
+      // 还有要实现那种让某个函数具备某能力（也就是最后一个函数不执行 这就compose的特殊情况）
+      // 调用形式 e(g(f(h))) 
+      function compose(...args) {
+        var arity = args.length - 1;
+        var tag = false;
+        if (typeof args[arity] === "function") {
+          tag = true;
+        }
+        if (arity > 1) {
+          var param = args.pop(args[arity]); // 先去除第一个函数A
+          arity--;
+          var newParam = args[arity].call(args[arity], param); // 执行完
+          args.pop(args[arity]);// 拿出来
+          args.push(newParam); // 把返回的结果push进去
+          return compose(...args);
+        } else if (arity === 1) {
+          if (!tag) {
+            return args[0].bind(null, args[1]);
+          } else {
+            return args[0].call(null, args[1]);
+          }
+        }
+      }
+      // 从右到左传入参数
+      // 登陆
+      function login(user,age) {
+        console.log("login " + user,age);
+      }
+      // 注册
+      function resgister(user) {
+        console.log("resgister " + user);
+      }
+      // 抽离出来的中间函数
+      function wrapUser(Wrapfunc) {
+        let Newfunc = (age) => {
+          // let user = localStorage.getItem("user");
+          let user = "vnues";
+          Wrapfunc(user,age);
+        };
+        return Newfunc;
+      }
+      function wrapConsole(func) {
+        let Newfunc = () => {
+          // let user = localStorage.getItem("user");
+         let age=22
+          func(age);
+        };
+        return Newfunc;
+      }
+      // 调用
+      // debugger 最后的结果满足不了
+      debugger
+      login = compose(
+        wrapConsole,
+        wrapUser,
+        login
+      );
+  
+      login();
+     //  resgister();
+    </script>
+  </body>
+</html>

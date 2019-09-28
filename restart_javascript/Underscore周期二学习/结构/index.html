@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+</head>
+
+<body>
+  <script src="../underscore.js"></script>
+  <script>
+
+    /*
+       _.each([1,2,3],(element, index, list)=>{
+         debugger
+           console.log(element, index, list)
+       })
+       _.each({one: 1, two: 2, three: 3},(value, key, list)=>{
+           console.log(value, key, list)
+       })
+      const obj = {
+                    0 : "a",
+                    1 : "第二",
+                    2 :    "1234",
+                    5 :    "1234",
+                    length : 4
+                 } 
+       _.each(obj,(element, index, list)=>{
+           console.log(element, index, list)
+       })
+     function alert(){
+        console.log(arguments)
+        console.log(arguments.callee)
+     }
+     alert(1,2,3,4)
+     */
+    _.map([1, 2, 3], [1]) // [undefined, undefined, undefined]
+    _.map([1, 2, 3], {name:"vnues"}) // [false, false, false]
+    _.map([1,2,3],"name") //[undefined, undefined, undefined]
+    _.map({name:"vnues",age:12,height:"180cm"},{money:12000}) // [false, false, false]
+    _.map({name:"vnues",age:12,height:"180cm"},"we") //  [undefined, undefined, undefined]
+    // 最后是vnues["we"] --->肯定报undefind
+    // _.map([1, 2, 3], null) // [1,2,3]
+    // debugger
+   _.reduce([1,2,3],function(memo, num){  }, 0)
+   _.reduce({0:"name",1:2,2:3,length:3},function(memo,num){return memo+num},0)
+   _.reduce({0:1,1:2,2:3,length:3},function(memo,num){return memo+num},0)
+   _.some([null, 0, 'yes', false])
+   debugger
+   // [[5, 1, 7], [3, 2, 1]] 看清楚啊 不是[5,1,7],[3,2,1]
+   _.invoke([[5, 1, 7], [3, 2, 1]], 'sort',5,6,78,9);
+   // _.invoke([[5, 1, 7], [3, 2, 1]])//  [undefined, undefined]
+  </script>
+</body>
+
+</html>

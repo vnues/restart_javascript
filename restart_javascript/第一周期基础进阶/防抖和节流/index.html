@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Document</title>
+    <style>
+      #search {
+        width: 400px;
+        margin-left: 300px;
+        margin-bottom: 50px;
+      }
+      #showSearch {
+        width: 800px;
+        height: 100px;
+        background: lightblue;
+        color: red;
+        margin-left: 300px;
+      }
+    </style>
+  </head>
+  <body>
+    <input type="search" name="" id="search" />
+    <div id="showSearch"></div>
+  </body>
+  <script>
+    // 参数immediate值 true||false
+    function debounce(fn, wait, immediate) {
+      let timeout, result;
+      let debounced = function() {
+        let context = this;
+        let args = arguments;
+        if (timeout) {
+          clearTimeout(timeout);
+        }
+        let callNow = !timeout;
+        if (immediate) {
+          // 已经执行过，不再执行
+          timeout = setTimeout(function() {
+            timeout = null;
+          }, wait);
+          if (callNow) {
+            result = fn.apply(context, args);
+          }
+        } else {
+          timeout = setTimeout(function() {
+            result = fn.apply(context, args);
+            console.log(result);
+          }, wait);
+        }
+      };
+      debounced.cancel = function() {
+        clearTimeout(timeout);
+        timeout = null;
+      };
+      return debounced;
+    }
+    let search = document.querySelector("#search");
+    let showSearch = document.querySelector("#showSearch");
+    function getSearchInfo(e) {
+      console.log(this.value);
+      showSearch.innerText = this.value; // 报错
+      console.log(e); // undefined
+      // showSearch.innerText = search.value;
+      return "vnues";
+    }
+    search.onkeyup = debounce(getSearchInfo, 100, false);
+  </script>
+</html>

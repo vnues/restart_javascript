@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+</head>
+
+<body>
+  <div id="app">
+    <p>{{text}}</p>
+  </div>
+</body>
+<script src="./vue.js"></script>
+<!-- 这个{{}}语法怎么渲染上去的 Vnode重新操作吗 这样就讲通了 -->
+<script>
+  new Vue({
+    el: '#app',
+    data: {
+
+      text: '学习 Vue',
+    },
+  })
+// new Vue({
+//   // 这里为什么不写app因为documemt.querySelector("#app")
+//   // 拿到dom元素就是这样的
+//   el: '#app',
+//   data: {
+//      message:"hello vnues"
+//   }
+// })
+ /*
+  // 如果我想把这个当做组件怎么操作
+  var obj = {
+    foo: 'bar'
+  }
+  // new Vue后再对象里面执行一个this._init
+  // 我猜渲染Watcher应该也有对应的操作
+  new Vue({
+    // 传入一个dom对象标识 实际会转化为document.quey...
+    // 注意name是组件才有的属性
+    el: '#app',
+    // 这样写也行
+    data(){
+      return obj
+    },
+    //对象里面的写法相当于声明函数
+    // render函数接收一个参数
+    render(createElement) {
+      // 这样写直接替换到app1整个
+      // 这样写会报错
+      return [createElement('div',{
+          attrs:{
+            id:'app'
+          }
+      },[createElement('div',[createElement('span',['123123123123'])])]),createElement('div',{
+          attrs:{
+            id:'app'
+          }
+      },[createElement('div',[createElement('span',['123123123123'])])])]
+    }
+    // render(createElement) {
+    //   // 这样写直接替换到app1整个
+    //   return createElement('div',
+    //   Array.apply(null, { length: 20 }).map(function () {
+    //     return createElement('p', 'hi')
+    //   }))
+    // }
+    })
+    */
+ // 当父组件传过来的是空items时
+//  var EmptyList = {template: '<p>Empty list</p>'};
+//     //当父组件传来的items元素为对象类型时
+//     var TableList = 'ul'
+//     // 当父组件定义了isOrdered变量且为true
+//     var UnorderedList = 'ul'
+       // 全局注册组件
+//     // 定义组件
+//     Vue.component('smart-list', {
+//         // 标记为函数式组件
+//         functional: true,
+//         // render函数
+//         render: function (createElement, context) {
+//             // console.log(context)//若不理解可以打印出来context来看看里面都有些什么东西
+//             //规定组件的渲染规则
+//             function appropriateListComp() {
+//                 //获取父组件传来的数据
+//                 var items = context.props.items;
+//                 //若空，则返回前面定义的emptylist
+//                 if (items.length === 0) return EmptyList;
+//                 //若为对象
+//                 if (typeof items[0] === 'object') return TableList;
+//                 //其他
+//                 return UnorderedList
+//             }
+
+//             // 生成模板
+//             // 函数式组件拍平
+//             return [createElement(
+//                 //模板标记为渲染规则函数返回值
+//                 appropriateListComp(),
+//                 //模板子元素，返回一个数组
+//                 Array.apply(null, {length: context.props.items.length}).map(function (value, index) {
+//                     return createElement('li',context.props.items[index].name)
+//                 })
+//             ),createElement(
+//                 //模板标记为渲染规则函数返回值
+//                 appropriateListComp(),
+//                 //模板子元素，返回一个数组
+//                 Array.apply(null, {length: context.props.items.length}).map(function (value, index) {
+//                     return createElement('li',context.props.items[index].name)
+//                 })
+//             )]
+//         },
+//         props: {
+//             items: {
+//                 type: Array,
+//                 required: true
+//             },
+//             isOrdered: Boolean
+//         }
+//     });
+//     new Vue({
+//         el: '#app',
+//         data:{
+//             items:[
+//                 {
+//                     name:'a',
+//                     id:0
+//                 },
+//                 {
+//                     name:'b',
+//                     id:1
+//                 },
+//                 {
+//                     name:'c',
+//                     id:2
+//                 }
+//             ]
+//         }
+//     })
+</script>
+
+</html>

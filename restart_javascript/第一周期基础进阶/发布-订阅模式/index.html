@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Document</title>
+  </head>
+  <body>
+    <div style="color: lightpink;width:200px;height:200px;">
+      这是测试....................
+    </div>
+    <script>
+      var salesOffices = {}; // 定义售楼处
+      salesOffices.clientList = []; // 缓存列表，存放订阅者的回调函数
+      salesOffices.listen = function(fn) {
+        // 增加订阅者
+        this.clientList.push(fn); 
+      };
+      // 一发布消息就去触发（也就是通知）回调函数（订阅者）
+      salesOffices.trigger = function() {
+        // 发布消息
+        for (var i = 0, fn; (fn = this.clientList[i++]); ) {
+          fn.apply(this, arguments); // (2) // arguments 是发布消息时带上的参数
+        }
+      };
+      salesOffices.listen(function(price, squareMeter) {
+        // 小明订阅消息
+        console.log("价格= " + price);
+        console.log("squareMeter= " + squareMeter);
+      });
+      salesOffices.listen(function(price, squareMeter) {
+        // 小红订阅消息
+        console.log("价格= " + price);
+        console.log("squareMeter= " + squareMeter);
+      });
+      salesOffices.trigger(2000000, 88); // 输出：200 万，88 平方米
+      salesOffices.trigger(3000000, 110); // 输出：300 万，110 平方米
+      
+    </script>
+  </body>
+</html>

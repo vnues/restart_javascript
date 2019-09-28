@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+<input type="text" id="in"/>
+输入的值为：<span id="out"></span>
+</body>
+<script>
+
+    var int = document.getElementById('in');
+    var out = document.getElementById('out');
+    var obj = {};
+
+    Object.defineProperty(obj, 'msg', {
+        enumerable: true,
+        configurable: true,
+        set (newVal) {
+            out.innerHTML = newVal;
+        }
+    })
+
+    int.addEventListener('input', function(e) {
+        obj.msg = e.target.value;
+    })
+</script>
+</html>

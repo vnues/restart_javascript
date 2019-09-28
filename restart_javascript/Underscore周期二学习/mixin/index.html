@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+</head>
+<div id="exports"></div>
+<div id="qq"></div>
+
+<body>
+  <script src="../underscore.js"></script>
+  <script>
+    /*
+       _.each([1,2,3],(element, index, list)=>{
+         debugger
+           console.log(element, index, list)
+       })
+    */
+   // 这种写法怎么转化成上述函数式写法
+   debugger
+
+      _([1, 2, 3]).each(function(value){
+          console.log(value)
+      })
+  </script>
+</body>
+
+</html>
