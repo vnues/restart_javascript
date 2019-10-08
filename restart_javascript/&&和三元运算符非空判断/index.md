@@ -1,3 +1,4 @@
+# 判断后端传递过来的字段是否存在的情况
 
 ### &&
 逻辑与，AND（&&）	expr1 && expr2	若 expr1 可转换为 true，则返回 expr2；否则，返回 expr1。
@@ -22,7 +23,7 @@ js中万物皆对象 我们去访问存在的变量a然后访问不存在的属�
 ### 原理
 
 ```javascript
-console.log(a)
+console.x`log(a)
 VM479:1 Uncaught ReferenceError: a is not defined
 ```
 > 好奇我们这个字段不存在  那为啥还可以这样写a.b.c
