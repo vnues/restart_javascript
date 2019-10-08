@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Document</title>
+  </head>
+  <style>
+    /*
+   BFC 可以包含浮动的元素（清除浮动）
+   
+   */
+    .parent {
+      border: 1px solid red;
+      overflow: hidden;
+    }
+    .son {
+      width: 200px;
+      height: 300px;
+      background: #eee;
+      float: left;
+    }
+    .div1 {
+    }
+    .left {
+      width: 200px;
+      height: 200px;
+      float: left;
+      background: #eee;
+    }
+    .right {
+      width: 400px;
+      height: 400px;
+      background: red;
+    }
+    .div2 {
+    }
+    .top {
+      overflow: hidden;
+      width: 400px;
+      height: 400px;
+      background: red;
+      margin-bottom: 100px;
+    }
+    .bottom {
+      overflow: hidden;
+      width: 400px;
+      height: 400px;
+      background: green;
+      margin-top: 100px;
+    }
+  </style>
+  <body>
+    <!-- <div class="parent">
+      <div class="son"></div>
+  </div> -->
+
+    <!-- <div class="div1"></div>
+     <div class="left">浮动元素</div>
+     只有文字才会有环绕效果的 
+     <div class="right">我是十点半粉红色的部分电饭煲舍不得放寒假的发布会上大部分的说法的发布会上电饭煲决胜巅峰撒发布会上绝大部分阶段还是水电费不会减速大部分金黄色的三大部分黄金时代不符合进的少部分黄金时代很方便的闪电风暴黄金时代办法就234234238shdfsjdfhsuhdfuhsdufhsijdfhajsdhfshdf82348y284y2834y24y823y4823y4jhbsdhfbshdbfh</div>
+  </div> -->
+
+    <div class="div2">
+      <div class="top"></div>
+      <div class="bottom"></div>
+    </div>
+  </body>
+</html>

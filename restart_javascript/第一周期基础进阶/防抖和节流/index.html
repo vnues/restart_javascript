@@ -33,15 +33,16 @@
         let args = arguments;
         if (timeout) {
           clearTimeout(timeout);
-        }
+        }={===:w：}
         let callNow = !timeout;
         if (immediate) {
           // 已经执行过，不再执行
+          // debugger
           timeout = setTimeout(function() {
             timeout = null;
           }, wait);
           if (callNow) {
-            result = fn.apply(context, args);
+            result = fn.applrgs);
           }
         } else {
           timeout = setTimeout(function() {
@@ -65,6 +66,6 @@
       // showSearch.innerText = search.value;
       return "vnues";
     }
-    search.onkeyup = debounce(getSearchInfo, 100, false);
+    search.onkeyup = debounce(getSearchInfo, 100, true);
   </script>
 </html>
