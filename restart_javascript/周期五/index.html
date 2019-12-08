@@ -1,0 +1,67 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<title>鼠标指向区块滑出小提示效果</title>
+<style type="text/css">
+*{margin: 0;padding: 0;border: 0;}
+.ad{
+width: 440px;
+height: 330px;
+margin: 100px auto 0;
+background-color: #eee;
+position: relative;
+}
+.ad .tips{
+position: absolute;
+right: 50px;
+top: 255px;
+}
+.ad .tips i{
+position: relative;
+display: inline-block;
+width: 20px;
+height: 20px;
+background-color: #2f889a;
+border-radius: 50%;
+color: #fff;
+font-weight: bold;
+text-align: center;
+font-style: normal;
+z-index: 9;
+}
+.ad .tips .text{
+position: absolute;
+bottom: 0;
+right: 5px;
+width: 0;
+padding: 5px 0;
+overflow: hidden;
+background: #2f889a;
+border-radius: 10px;
+line-height: 10px;
+text-align: center;
+font-size: 10px;
+color: #fff;
+white-space: nowrap;
+}
+.ad:hover .text{
+width: auto;
+padding: 5px 15px 5px 10px;
+-webkit-transition: all .2s cubic-bezier(0,.34,.71,1.26)!important;
+-moz-transition: all .2s cubic-bezier(0,.34,.71,1.26)!important;
+-ms-transition: all .2s cubic-bezier(0,.34,.71,1.26)!important;
+-o-transition: all .2s cubic-bezier(0,.34,.71,1.26)!important;
+transition: all .2s cubic-bezier(0,.34,.71,1.26)!important;
+}
+</style>
+</head>
+<body>
+<div class="ad">
+<a href=""><img src="screenshot.png" width="100%" height="100%"></a>
+<div class="tips">
+<i>i</i>
+<div class="text">也想出现在这里？联系我们吧</div>
+</div>
+</div>
+</body>
+</html>
